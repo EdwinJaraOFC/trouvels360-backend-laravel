@@ -35,5 +35,14 @@ class DatabaseSeeder extends Seeder
 
         // Crear 5 usuarios con rol proveedor
         Usuario::factory()->count(5)->state(['rol' => 'proveedor'])->create();
+
+        // Crear 5 hoteles
+        \App\Models\Hotel::factory(5)->create();
+
+        // Crear 5 tours
+        \App\Models\Tour::factory(5)->create();
+
+        // Crear 10 reservas
+        \App\Models\Reserva::factory(10)->create();
     }
 }

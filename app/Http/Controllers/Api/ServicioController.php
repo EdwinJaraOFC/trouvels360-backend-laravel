@@ -32,7 +32,7 @@ class ServicioController extends Controller
 
         return response()->json([
             'message'=>'Servicio creado exitosamente',  
-            'data' => $servicio->only('id','proveedor_id','nombre','tipo','ciudad','precio'),
+            'data' => $servicio->only('id','proveedor_id','nombre','tipo','ciudad'),
         ],201);
     }
     // Mostrar el servicio con id=$id
@@ -43,7 +43,7 @@ class ServicioController extends Controller
         if(!$servicio){
             return response()->json(['message'=> 'Servicio no encontrado'],404);
         }
-        return response()->json($servicio->only('id','proveedor_id','nombre','tipo','ciudad','precio'),200);
+        return response()->json($servicio->only('id','proveedor_id','nombre','tipo','ciudad'),200);
     }
 
     /**

@@ -25,7 +25,6 @@ class StoreServicioRequest extends FormRequest
             'tipo' => ['required','in:hotel,tour'],
             'descripcion' => ['nullable','string'],
             'ciudad' => ['required','string','max:100'],
-            'precio'      => ['required','numeric','min:0'],
             'horario_inicio' => ['nullable','date_format:H:i:s'],
             'horario_fin' =>['nullable','date_format:H:i:s'],
             'imagen_url'=>['nullable','url','max:500'],

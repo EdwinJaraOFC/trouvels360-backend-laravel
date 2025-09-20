@@ -19,7 +19,6 @@ return new class extends Migration {
             $table->enum('tipo', ['hotel', 'tour']); // especialización
             $table->text('descripcion')->nullable();
             $table->string('ciudad', 100);
-            $table->decimal('precio', 10, 2); // precio base
             $table->time('horario_inicio')->nullable();
             $table->time('horario_fin')->nullable();
             $table->string('imagen_url', 500)->nullable();

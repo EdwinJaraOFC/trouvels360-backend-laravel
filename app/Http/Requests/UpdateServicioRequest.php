@@ -27,7 +27,6 @@ class UpdateServicioRequest extends FormRequest
             'tipo' => ['sometimes','in:hotel,tour'],
             'descripcion' => ['nullable','string'],
             'ciudad' => ['sometimes','string','max:100'],
-            'precio'      => ['sometimes','numeric','min:0'],
             'horario_inicio' => ['nullable','date_format:H:i:s'],
             'horario_fin' =>['nullable','date_format:H:i:s'],
             'imagen_url'=>['nullable','url','max:500'],

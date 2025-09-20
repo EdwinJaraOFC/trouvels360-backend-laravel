@@ -21,7 +21,6 @@ class ServicioFactory extends Factory
             'tipo'         => $this->faker->randomElement(['hotel', 'tour']),
             'descripcion'  => $this->faker->sentence(10),
             'ciudad'       => $this->faker->city,
-            'precio'       => $this->faker->randomFloat(2, 20, 500), // entre 20 y 500
             'horario_inicio' => $this->faker->time('H:i:s'),
             'horario_fin'    => $this->faker->time('H:i:s'),
             'imagen_url'   => $this->faker->imageUrl(640, 480, 'travel', true),

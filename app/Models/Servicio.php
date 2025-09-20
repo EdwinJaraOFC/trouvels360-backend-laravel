@@ -20,7 +20,6 @@ class Servicio extends Model
         'tipo',
         'descripcion',
         'ciudad',
-        'precio',
         'horario_inicio',
         'horario_fin',
         'imagen_url',

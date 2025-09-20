@@ -26,7 +26,7 @@ class Servicio extends Model
         'imagen_url',
     ];
 
-    // 🔗 Relaciones
+    // Relaciones
     public function proveedor()
     {
         return $this->belongsTo(Usuario::class, 'proveedor_id');

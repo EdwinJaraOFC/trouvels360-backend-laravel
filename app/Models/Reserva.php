@@ -24,7 +24,33 @@ class Reserva extends Model
         'estado',
     ];
 
-    // 🔗 Relaciones
+    // � Accessors
+    public function getPrecioTotalAttribute(): float
+    {
+        $fechaInicio = new \DateTime($this->fecha_inicio);
+        $fechaFin = new \DateTime($this->fecha_fin);
+        $dias = $fechaInicio->diff($fechaFin)->days;
+
+        if ($this->servicio->tipo === 'hotel' && $this->servicio->relationLoaded('hotel') && $this->servicio->hotel) {
+            return $dias * $this->servicio->hotel->precio_por_noche;
+        }
+
+        if ($this->servicio->tipo === 'tour' && $this->servicio->relationLoaded('tour') && $this->servicio->tour) {
+            return $this->huespedes * $this->servicio->tour->precio_por_persona;
+        }
+
+        return $this->servicio->precio; // Precio base como fallback
+    }
+
+    public function getDiasReservaAttribute(): int
+    {
+        $fechaInicio = new \DateTime($this->fecha_inicio);
+        $fechaFin = new \DateTime($this->fecha_fin);
+        
+        return $fechaInicio->diff($fechaFin)->days;
+    }
+
+    // �🔗 Relaciones
     public function usuario()
     {
         return $this->belongsTo(Usuario::class, 'usuario_id');

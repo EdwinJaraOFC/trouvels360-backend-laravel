@@ -19,7 +19,8 @@ class TourFactory extends Factory
             'servicio_id'        => Servicio::factory()->state(['tipo' => 'tour']),
             'categoria'          => $this->faker->randomElement(['Aventura', 'Gastronomía', 'Cultural', 'Naturaleza']),
             'duracion'           => $this->faker->randomElement(['2 horas', '4 horas', '1 día']),
-            'precio_por_persona' => $this->faker->randomFloat(2, 15, 200),
+            'precio_adulto' => $this->faker->randomFloat(2, 15, 200),
+            'precio_child' => $this->faker->randomFloat(2, 15, 200),
         ];
     }
 }

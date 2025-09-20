@@ -19,7 +19,8 @@ class Tour extends Model
         'servicio_id',
         'categoria',
         'duracion',
-        'precio_por_persona',
+        'precio_adulto',
+        'precio_child'
     ];
 
     // 🔗 Relaciones

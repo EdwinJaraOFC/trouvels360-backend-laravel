@@ -13,7 +13,8 @@ return new class extends Migration {
 
             $table->string('categoria', 100)->nullable();
             $table->string('duracion', 50)->nullable(); // ej. "4 horas"
-            $table->decimal('precio_por_persona', 10, 2);
+            $table->decimal('precio_adulto', 10, 2);
+            $table->decimal('precio_child', 10, 2);
 
             // FK explícita con cascade
             $table->foreign('servicio_id')

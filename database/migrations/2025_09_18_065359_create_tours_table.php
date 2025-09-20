@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('tours', function (Blueprint $table) {
             $table->id();
             // FK de servicios.id (1:1)
-            $table->foreign('servicio_id')
+            $table->foreignId('servicio_id')
                 ->references('id')->on('servicios')
                 ->onDelete('cascade');
 

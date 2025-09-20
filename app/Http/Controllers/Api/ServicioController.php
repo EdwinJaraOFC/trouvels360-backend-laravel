@@ -27,7 +27,7 @@ class ServicioController extends Controller
     // Crear un nuevo servicio
     public function store(StoreServicioRequest $request): JsonResponse
     {   
-        // Crear el tour usando Eloquent
+        // Crear el servicio usando Eloquent
         $servicio = Servicio::create($request->validated());
 
         return response()->json([

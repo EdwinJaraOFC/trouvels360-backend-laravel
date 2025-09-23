@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Controllers\Api\HotelController;
 use App\Http\Controllers\Api\ReservaController;
 use App\Http\Controllers\Api\ServicioController;
+use App\Http\Controllers\Api\TourController;
 
 Route::get('ping', fn () => response()->json(['pong' => true]));
 Route::apiResource('usuarios', UsuarioController::class);
@@ -18,4 +19,5 @@ Route::get('usuarios/{usuario_id}/reservas', [ReservaController::class, 'porUsua
 Route::get('servicios/{servicio_id}/reservas', [ReservaController::class, 'porServicio']);
 Route::get('reservas/buscar/{codigo}', [ReservaController::class, 'buscarPorCodigo']);
 Route::apiResource('servicios', ServicioController::class);
+Route::apiResource('tours', TourController::class);
 

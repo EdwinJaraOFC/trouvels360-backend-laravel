@@ -20,13 +20,12 @@ class Servicio extends Model
         'tipo',
         'descripcion',
         'ciudad',
-        'precio',
         'horario_inicio',
         'horario_fin',
         'imagen_url',
     ];
 
-    // 🔗 Relaciones
+    // Relaciones
     public function proveedor()
     {
         return $this->belongsTo(Usuario::class, 'proveedor_id');

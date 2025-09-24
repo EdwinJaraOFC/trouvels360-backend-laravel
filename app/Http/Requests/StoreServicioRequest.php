@@ -3,31 +3,45 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreServicioRequest extends FormRequest
 {
-    // Determine if the user is authorized to make this request.
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+        return $user && $user->rol === 'proveedor';
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->user()) {
+            // Fuerza el dueño al proveedor autenticado
+            $this->merge(['proveedor_id' => $this->user()->id]);
+        }
+
+        if ($this->has('nombre') && is_string($this->nombre)) {
+            $this->merge(['nombre' => trim($this->nombre)]);
+        }
+        if ($this->has('ciudad') && is_string($this->ciudad)) {
+            $this->merge(['ciudad' => trim($this->ciudad)]);
+        }
+    }
+
     public function rules(): array
     {
         return [
-            'proveedor_id'   => ['required','integer'],
-            'nombre' => ['required','string','max:150'],
-            'tipo' => ['required','in:hotel,tour'],
-            'descripcion' => ['nullable','string'],
-            'ciudad' => ['required','string','max:100'],
-            'horario_inicio' => ['nullable','date_format:H:i:s'],
-            'horario_fin' =>['nullable','date_format:H:i:s'],
-            'imagen_url'=>['nullable','url','max:500'],
+            // Ya no lo pides al cliente: lo pones tú en prepareForValidation
+            'proveedor_id' => [
+                'required',
+                Rule::exists('usuarios','id')->where('rol','proveedor'),
+            ],
+            'nombre'       => ['required','string','max:150'],
+            'tipo'         => ['required', Rule::in(['hotel','tour'])],
+            'descripcion'  => ['sometimes','nullable','string'],
+            'ciudad'       => ['required','string','max:100'],
+            'imagen_url'   => ['sometimes','nullable','url','max:500'],
+            'activo'       => ['sometimes','boolean'],
         ];
     }
 }

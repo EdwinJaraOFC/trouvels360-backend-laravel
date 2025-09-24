@@ -3,33 +3,41 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateServicioRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+        $servicio = $this->route('servicio'); // route-model binding
+
+        return $user
+            && $user->rol === 'proveedor'
+            && $servicio
+            && (int) $servicio->proveedor_id === (int) $user->id;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('nombre') && is_string($this->nombre)) {
+            $this->merge(['nombre' => trim($this->nombre)]);
+        }
+        if ($this->has('ciudad') && is_string($this->ciudad)) {
+            $this->merge(['ciudad' => trim($this->ciudad)]);
+        }
+    }
+
     public function rules(): array
     {
         return [
-            'proveedor_id'   => ['sometimes','integer'],
-            'nombre' => ['sometimes','string','max:150'],
-            'tipo' => ['sometimes','in:hotel,tour'],
-            'descripcion' => ['nullable','string'],
-            'ciudad' => ['sometimes','string','max:100'],
-            'horario_inicio' => ['nullable','date_format:H:i:s'],
-            'horario_fin' =>['nullable','date_format:H:i:s'],
-            'imagen_url'=>['nullable','url','max:500'],
+            'proveedor_id' => ['prohibited'], // ← no se puede cambiar el dueño
+            'nombre'       => ['sometimes','string','max:150'],
+            'tipo'         => ['sometimes', Rule::in(['hotel','tour'])],
+            'descripcion'  => ['sometimes','nullable','string'],
+            'ciudad'       => ['sometimes','string','max:100'],
+            'imagen_url'   => ['sometimes','nullable','url','max:500'],
+            'activo'       => ['sometimes','boolean'],
         ];
     }
 }

@@ -2,27 +2,34 @@
 
 namespace Database\Factories;
 
+use App\Models\Usuario;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Hash;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Usuario>
- */
+/** Factory de 'usuarios'. */
 class UsuarioFactory extends Factory
 {
-    /**
-     * Definir el estado por defecto del modelo.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = Usuario::class;
+
     public function definition(): array
     {
         return [
-            'nombre'   => $this->faker->firstName(),   // Nombre aleatorio
-            'apellido' => $this->faker->lastName(),    // Apellido aleatorio
-            'email'    => $this->faker->unique()->safeEmail(), // Email único
-            'password' => Hash::make('password'),      // Contraseña por defecto encriptada
-            'rol'      => $this->faker->randomElement(['viajero', 'proveedor']), // Rol aleatorio
+            'nombre'   => $this->faker->firstName(),
+            'apellido' => $this->faker->lastName(),
+            'email'    => $this->faker->unique()->safeEmail(),
+            'password' => 'password', // se hashea por el cast del modelo
+            'rol'      => $this->faker->randomElement(['viajero', 'proveedor']),
         ];
+    }
+
+    /** Estado: viajero */
+    public function viajero(): self
+    {
+        return $this->state(fn () => ['rol' => 'viajero']);
+    }
+
+    /** Estado: proveedor */
+    public function proveedor(): self
+    {
+        return $this->state(fn () => ['rol' => 'proveedor']);
     }
 }

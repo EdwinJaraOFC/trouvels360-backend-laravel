@@ -2,22 +2,40 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\UsuarioController;
-use App\Http\Controllers\Api\HotelController;
-use App\Http\Controllers\Api\ReservaController;
 use App\Http\Controllers\Api\ServicioController;
-use App\Http\Controllers\Api\TourController;
+use App\Http\Controllers\Api\AuthController;
 
+// Healthcheck
 Route::get('ping', fn () => response()->json(['pong' => true]));
+
+// ---------- Usuarios (público por ahora) ----------
 Route::apiResource('usuarios', UsuarioController::class);
-Route::apiResource('hoteles', HotelController::class);
-Route::apiResource('reservas', ReservaController::class);
 
-// Rutas adicionales para reservas
-Route::patch('reservas/{reserva}/estado', [ReservaController::class, 'actualizarEstado']);
-Route::post('reservas/{reserva}/cancelar', [ReservaController::class, 'cancelar']);
-Route::get('usuarios/{usuario_id}/reservas', [ReservaController::class, 'porUsuario']);
-Route::get('servicios/{servicio_id}/reservas', [ReservaController::class, 'porServicio']);
-Route::get('reservas/buscar/{codigo}', [ReservaController::class, 'buscarPorCodigo']);
-Route::apiResource('servicios', ServicioController::class);
-Route::apiResource('tours', TourController::class);
+// ---------- Auth ----------
+Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
 
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('auth/me', [AuthController::class, 'me']);
+    Route::post('auth/logout', [AuthController::class, 'logout']);
+});
+
+// ---------- Servicios ----------
+/**
+ * Rutas públicas: listar y ver detalle.
+ * Importante: definirlas ANTES del grupo protegido para evitar sombras/colisiones.
+ */
+Route::apiResource('servicios', ServicioController::class)->only(['index','show']);
+
+/**
+ * Rutas protegidas: crear/actualizar/eliminar.
+ * No repitas apiResource completo ni mezcles fuera del group.
+ */
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('servicios', ServicioController::class)->only(['store','update','destroy']);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+  Route::post('servicios',  [ServicioController::class, 'store'])->can('create', \App\Models\Servicio::class);
+  Route::patch('servicios/{servicio}', [ServicioController::class, 'update'])->can('update', 'servicio');
+  Route::delete('servicios/{servicio}',[ServicioController::class, 'destroy'])->can('delete', 'servicio');
+});

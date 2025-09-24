@@ -16,14 +16,17 @@ class ServicioFactory extends Factory
     public function definition(): array
     {
         return [
+            // crea proveedor automáticamente si no se pasa uno
             'proveedor_id' => Usuario::factory()->state(['rol' => 'proveedor']),
-            'nombre'       => $this->faker->company . ' Service',
-            'tipo'         => $this->faker->randomElement(['hotel', 'tour']),
-            'descripcion'  => $this->faker->sentence(10),
-            'ciudad'       => $this->faker->city,
-            'horario_inicio' => $this->faker->time('H:i:s'),
-            'horario_fin'    => $this->faker->time('H:i:s'),
-            'imagen_url'   => $this->faker->imageUrl(640, 480, 'travel', true),
+            
+            'nombre'      => $this->faker->company . ' Service',
+            'tipo'        => $this->faker->randomElement(['hotel', 'tour']),
+            'descripcion' => $this->faker->sentence(10),
+            'ciudad'      => $this->faker->city,
+            'imagen_url'  => $this->faker->imageUrl(640, 480, 'travel', true),
+
+            // por defecto todos los servicios se crean como activos
+            'activo'      => true,
         ];
     }
 }

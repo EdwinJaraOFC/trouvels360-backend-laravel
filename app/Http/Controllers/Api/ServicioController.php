@@ -5,81 +5,85 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreServicioRequest;
 use App\Http\Requests\UpdateServicioRequest;
-use Illuminate\Http\Request;
-use App\Models\Servicio;  //si se va a trabajar con un modelo
+use App\Models\Servicio;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ServicioController extends Controller
 {
-    // Listar todos los servicios
-    public function index(): JsonResponse
+    // GET /api/servicios (público)
+    public function index(Request $request): JsonResponse
     {
-        $servicios = Servicio::all();
-        return response()->json($servicios);
+        $q = Servicio::query()
+            ->select('id','proveedor_id','nombre','tipo','ciudad','descripcion','imagen_url','activo','created_at');
+
+        // Filtros básicos
+        if ($request->filled('tipo'))   $q->where('tipo', $request->query('tipo'));      // 'hotel' | 'tour'
+        if ($request->filled('ciudad')) $q->where('ciudad', $request->query('ciudad'));
+        if ($request->filled('activo')) $q->where('activo', filter_var($request->query('activo'), FILTER_VALIDATE_BOOLEAN));
+
+        if ($request->filled('q')) {
+            $term = trim($request->query('q'));
+            $q->where(function ($w) use ($term) {
+                $w->where('nombre','like',"%{$term}%")
+                  ->orWhere('descripcion','like',"%{$term}%");
+            });
+        }
+
+        // Orden
+        $orden = $request->query('orden', 'recientes');
+        $orden === 'recientes'
+            ? $q->orderByDesc('id')
+            : $q->orderBy('nombre');
+
+        // Paginación
+        $perPage = max(1, min((int) $request->query('per_page', 12), 50));
+        $paginator = $q->paginate($perPage);
+
+        return response()->json($paginator, 200);
     }
 
-    // Show the form for creating a new resource.
-    public function create()
-    {
-        //
-    }
-
-    // Crear un nuevo servicio
+    // POST /api/servicios
     public function store(StoreServicioRequest $request): JsonResponse
-    {   
-        // Crear el servicio usando Eloquent
+    {
         $servicio = Servicio::create($request->validated());
 
         return response()->json([
-            'message'=>'Servicio creado exitosamente',  
-            'data' => $servicio->only('id','proveedor_id','nombre','tipo','ciudad'),
-        ],201);
-    }
-    // Mostrar el servicio con id=$id
-    public function show(string $id): JsonResponse
-    {   
-        $servicio = Servicio::find($id);
-        // Si no encuentra el servicio
-        if(!$servicio){
-            return response()->json(['message'=> 'Servicio no encontrado'],404);
-        }
-        return response()->json($servicio->only('id','proveedor_id','nombre','tipo','ciudad'),200);
+            'message' => 'Servicio creado exitosamente.',
+            'data'    => $servicio->only('id','proveedor_id','nombre','tipo','ciudad','activo','created_at'),
+        ], 201);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    // GET /api/servicios/{servicio}
+    public function show(Servicio $servicio): JsonResponse
     {
-        //
+        return response()->json(
+            $servicio->only('id','proveedor_id','nombre','tipo','ciudad','descripcion','imagen_url','activo','created_at','updated_at'),
+            200
+        );
     }
 
-    // Update el servicio con id=$id
-    public function update(UpdateServicioRequest $request, string $id): JsonResponse
-    {   
-        $servicio = Servicio::find($id);
-        if(!$servicio){
-            return response()->json(['message'=> 'Servicio no encontrado'],404);
+    // PUT/PATCH /api/servicios/{servicio}
+    public function update(UpdateServicioRequest $request, Servicio $servicio): JsonResponse
+    {
+        // (opcional) impedir cambiar 'tipo' tras crear
+        if ($request->filled('tipo') && $request->input('tipo') !== $servicio->tipo) {
+            return response()->json(['message' => 'No se permite cambiar el tipo del servicio.'], 422);
         }
-        // Si el servicio existe modificar
+
         $servicio->update($request->validated());
+        $servicio->refresh();
 
         return response()->json([
-            'message'=> 'Servicio modificado exitosamente',
-            'servicio'=> $servicio,
-        ],200);
+            'message' => 'Servicio modificado exitosamente.',
+            'data'    => $servicio->only('id','proveedor_id','nombre','tipo','ciudad','activo','updated_at'),
+        ], 200);
     }
 
-    //  Eliminar el registro con id= $id
-    public function destroy(string $id): JsonResponse
-    {   
-        $servicio = Servicio::find($id);
-        if(!$servicio){
-            return response()->json(['message'=> 'Servicio no encontrado'],404);
-        }
-        // Si el servicio si existe eliminar
-        $servicio->delete();
-
-        return response()->json(['message'=> 'Servicio eliminado exitosamente'],200);
+    // DELETE /api/servicios/{servicio}
+    public function destroy(Servicio $servicio): JsonResponse
+    {
+        $servicio->delete(); // FKs harán el resto cuando agreguemos tablas hijas
+        return response()->json(null, 204);
     }
 }

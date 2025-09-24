@@ -3,46 +3,44 @@
 namespace Database\Seeders;
 
 use App\Models\Usuario;
+use App\Models\Servicio;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Poblar la base de datos con datos de ejemplo.
-     */
+    /** Pobla la base con datos de ejemplo. */
     public function run(): void
     {
-        // Crear un usuario fijo con rol proveedor
-        Usuario::factory()->create([
+        // --- Usuarios fijos ---
+        $proveedor = Usuario::factory()->proveedor()->create([
             'nombre'   => 'Edwin',
             'apellido' => 'Proveedor',
             'email'    => 'edwinproveedor@gmail.com',
-            'password' => 'proveedor', // se encripta automáticamente por el modelo
-            'rol'      => 'proveedor',
+            'password' => 'proveedor', // se hashea por el cast
         ]);
 
-        // Crear un usuario fijo con rol viajero
-        Usuario::factory()->create([
+        Usuario::factory()->viajero()->create([
             'nombre'   => 'Edwin',
             'apellido' => 'Viajero',
             'email'    => 'edwinviajero@gmail.com',
-            'password' => 'viajero', // se encripta automáticamente por el modelo
-            'rol'      => 'viajero',
+            'password' => 'viajero',
         ]);
 
-        // Crear 5 usuarios con rol viajero
-        Usuario::factory()->count(5)->state(['rol' => 'viajero'])->create();
+        // Lotes adicionales de usuarios
+        Usuario::factory()->viajero()->count(5)->create();
+        Usuario::factory()->proveedor()->count(5)->create();
 
-        // Crear 5 usuarios con rol proveedor
-        Usuario::factory()->count(5)->state(['rol' => 'proveedor'])->create();
+        // --- Servicios ---
+        // 1) Crear un servicio fijo asociado al proveedor anterior
+        Servicio::factory()->create([
+            'proveedor_id' => $proveedor->id,
+            'nombre'       => 'Hotel Cayetano',
+            'tipo'         => 'hotel',
+            'ciudad'       => 'Lima',
+            'descripcion'  => 'Un hotel de prueba para el seeder.',
+        ]);
 
-        // Crear 5 hoteles
-        \App\Models\Hotel::factory(5)->create();
-
-        // Crear 5 tours
-        \App\Models\Tour::factory(5)->create();
-
-        // Crear 10 reservas
-        \App\Models\Reserva::factory(10)->create();
+        // 2) Crear lote aleatorio de servicios (hoteles/tours)
+        Servicio::factory()->count(10)->create();
     }
 }

@@ -3,48 +3,33 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+// Si NO usarás Sanctum aún, puedes quitar HasApiTokens:
+use Laravel\Sanctum\HasApiTokens;
 
-/**
- * @use HasFactory<\Database\Factories\UsuarioFactory>
- */
-class Usuario extends Model
+/** Modelo 'usuarios' listo para login futuro (sin soft delete). */
+class Usuario extends Authenticatable
 {
-    use HasFactory;
+    use HasApiTokens, Notifiable, HasFactory;
 
-    protected $table = 'usuarios'; // Nombre de la tabla en la base de datos
+    protected $table = 'usuarios';
 
-    /**
-     * Atributos que se pueden asignar masivamente.
-     *
-     * @var list<string>
-     */
-    protected $fillable = [
-        'nombre',
-        'apellido',
-        'email',
-        'password',
-        'rol',
-    ];
+    protected $fillable = ['nombre','apellido','email','password','rol'];
 
-    /**
-     * Atributos que deben permanecer ocultos al serializar (ej. JSON).
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-    ];
+    protected $hidden = ['password','remember_token'];
 
-    /**
-     * Atributos que deben convertirse automáticamente a otro tipo.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
-            'password' => 'hashed', // El password se encripta automáticamente
+            'password' => 'hashed',
+            'email_verified_at' => 'datetime',
         ];
+    }
+
+    // Normaliza email antes de guardar
+    public function setEmailAttribute(string $value): void
+    {
+        $this->attributes['email'] = mb_strtolower(trim($value));
     }
 }

@@ -5,9 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * @use HasFactory<\Database\Factories\ServicioFactory>
- */
 class Servicio extends Model
 {
     use HasFactory;
@@ -20,9 +17,12 @@ class Servicio extends Model
         'tipo',
         'descripcion',
         'ciudad',
-        'horario_inicio',
-        'horario_fin',
         'imagen_url',
+        'activo',
+    ];
+
+    protected $casts = [
+        'activo' => 'bool',
     ];
 
     // Relaciones
@@ -31,6 +31,7 @@ class Servicio extends Model
         return $this->belongsTo(Usuario::class, 'proveedor_id');
     }
 
+    // Mantén estas relaciones si planeas agregarlas luego
     public function hotel()
     {
         return $this->hasOne(Hotel::class, 'servicio_id');
@@ -44,5 +45,18 @@ class Servicio extends Model
     public function reservas()
     {
         return $this->hasMany(Reserva::class, 'servicio_id');
+    }
+
+    // Scopes opcionales útiles para el index
+    public function scopeActivos($query)
+    {
+        return $query->where('activo', true);
+    }
+
+    public function scopePorCiudadYTipo($query, ?string $ciudad = null, ?string $tipo = null)
+    {
+        return $query
+            ->when($ciudad, fn($q) => $q->where('ciudad', $ciudad))
+            ->when($tipo, fn($q) => $q->where('tipo', $tipo));
     }
 }

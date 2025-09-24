@@ -5,141 +5,115 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreHotelRequest;
 use App\Http\Requests\UpdateHotelRequest;
-use App\Http\Resources\HotelResource;
-use Illuminate\Http\Request;
 use App\Models\Hotel;
 use App\Models\Servicio;
+use App\Models\Habitacion;
+use App\Models\ReservaHabitacion;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 class HotelController extends Controller
 {
-    // GET /api/hoteles
-    public function index(): JsonResponse
-    {
-        $hoteles = Hotel::with(['servicio.proveedor:id,nombre,apellido'])->get();
-        
-        return HotelResource::collection($hoteles)->response();
-    }
-
-    // POST /api/hoteles
+    // POST /api/hoteles  (crear detalle para servicio tipo=hotel)
     public function store(StoreHotelRequest $request): JsonResponse
     {
-        try {
-            DB::beginTransaction();
-
-            $servicio = Servicio::create([
-                'proveedor_id' => $request->validated()['proveedor_id'],
-                'nombre' => $request->validated()['nombre'],
-                'tipo' => 'hotel',
-                'descripcion' => $request->validated()['descripcion'] ?? null,
-                'ciudad' => $request->validated()['ciudad'],
-                'precio' => $request->validated()['precio'],
-                'horario_inicio' => $request->validated()['horario_inicio'] ?? null,
-                'horario_fin' => $request->validated()['horario_fin'] ?? null,
-                'imagen_url' => $request->validated()['imagen_url'] ?? null,
-            ]);
-
-            $hotel = Hotel::create([
-                'servicio_id' => $servicio->id,
-                'direccion' => $request->validated()['direccion'],
-                'estrellas' => $request->validated()['estrellas'] ?? null,
-                'precio_por_noche' => $request->validated()['precio_por_noche'],
-            ]);
-
-            DB::commit();
-
-            return $this->respuestaHotelConRelaciones(
-                $hotel, 
-                'Hotel creado correctamente.', 
-                201
-            );
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Error al crear el hotel.',
-            ], 500);
+        // Evita duplicar 1:1
+        if (Hotel::find($request->input('servicio_id'))) {
+            return response()->json(['message' => 'El hotel ya existe para este servicio.'], 422);
         }
-    }
 
-    // GET /api/hoteles/{hotel}
-    public function show(Hotel $hotel): JsonResponse
-    {
-        return $this->respuestaHotelConRelaciones($hotel, 'Hotel encontrado.');
-    }
+        $hotel = Hotel::create($request->validated());
 
-    // PUT/PATCH /api/hoteles/{hotel}
-    public function update(UpdateHotelRequest $request, Hotel $hotel): JsonResponse
-    {
-        try {
-            DB::beginTransaction();
-
-            $validated = $request->validated();
-            
-            $servicioData = array_filter([
-                'nombre' => $validated['nombre'] ?? null,
-                'descripcion' => $validated['descripcion'] ?? null,
-                'ciudad' => $validated['ciudad'] ?? null,
-                'precio' => $validated['precio'] ?? null,
-            ]);
-            
-            if (!empty($servicioData)) {
-                $hotel->servicio->update($servicioData);
-            }
-
-            $hotelData = array_filter([
-                'direccion' => $validated['direccion'] ?? null,
-                'estrellas' => $validated['estrellas'] ?? null,
-                'precio_por_noche' => $validated['precio_por_noche'] ?? null,
-            ]);
-            
-            if (!empty($hotelData)) {
-                $hotel->update($hotelData);
-            }
-
-            DB::commit();
-
-            // Recargar el modelo para obtener los cambios actualizados
-            $hotel->refresh();
-            
-            return $this->respuestaHotelConRelaciones($hotel, 'Hotel actualizado correctamente.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Error al actualizar el hotel.',
-            ], 500);
-        }
-    }
-
-    // DELETE /api/hoteles/{hotel}
-    public function destroy(Hotel $hotel): JsonResponse
-    {
-        try {
-            $hotel->servicio->delete();
-            
-            return response()->json([
-                'message' => 'Hotel eliminado correctamente.',
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'No se pudo eliminar el hotel. Puede tener reservas activas.',
-            ], 422);
-        }
-    }
-
-    /**
-     * Método helper para generar respuestas consistentes con HotelResource
-     */
-    private function respuestaHotelConRelaciones(Hotel $hotel, string $mensaje, int $codigoEstado = 200): JsonResponse
-    {
-        // Cargar las relaciones necesarias para la presentación completa
-        $hotel->load(['servicio.proveedor:id,nombre,apellido']);
-        
         return response()->json([
-            'message' => $mensaje,
-            'data' => new HotelResource($hotel),
-        ], $codigoEstado);
+            'message' => 'Hotel creado correctamente.',
+            'data'    => $hotel,
+        ], 201);
+    }
+
+    // GET /api/hoteles/{servicio_id}
+    public function show(int $servicio_id): JsonResponse
+    {
+        $hotel = Hotel::with('habitaciones')->find($servicio_id);
+        if (!$hotel) return response()->json(['message' => 'Hotel no encontrado'], 404);
+
+        return response()->json([
+            'hotel'       => $hotel->only('servicio_id','direccion','estrellas','created_at','updated_at'),
+            'habitaciones'=> $hotel->habitaciones->map(fn($h) => [
+                'id'                 => $h->id,
+                'nombre'             => $h->nombre,
+                'capacidad_adultos'  => $h->capacidad_adultos,
+                'capacidad_ninos'    => $h->capacidad_ninos,
+                'cantidad'           => $h->cantidad,
+                'precio_por_noche'   => (float) $h->precio_por_noche,
+            ]),
+        ], 200);
+    }
+
+    // PUT /api/hoteles/{servicio_id}
+    public function update(UpdateHotelRequest $request, int $servicio_id): JsonResponse
+    {
+        $hotel = Hotel::find($servicio_id);
+        if (!$hotel) return response()->json(['message' => 'Hotel no encontrado'], 404);
+
+        $hotel->update($request->validated());
+        $hotel->refresh();
+
+        return response()->json([
+            'message' => 'Hotel actualizado correctamente.',
+            'data'    => $hotel,
+        ], 200);
+    }
+
+    // DELETE /api/hoteles/{servicio_id}
+    public function destroy(int $servicio_id): JsonResponse
+    {
+        $hotel = Hotel::find($servicio_id);
+        if (!$hotel) return response()->json(['message' => 'Hotel no encontrado'], 404);
+
+        $hotel->delete(); // cascada borra habitaciones y reservas
+        return response()->json(null, 204);
+    }
+
+    // GET /api/hoteles/{servicio_id}/disponibilidad?check_in=YYYY-MM-DD&check_out=YYYY-MM-DD
+    public function disponibilidad(Request $request, int $servicio_id): JsonResponse
+    {
+        $request->validate([
+            'check_in'  => ['required','date_format:Y-m-d'],
+            'check_out' => ['required','date_format:Y-m-d','after:check_in'],
+        ]);
+
+        $hotel = Hotel::with('habitaciones')->find($servicio_id);
+        if (!$hotel) return response()->json(['message' => 'Hotel no encontrado'], 404);
+
+        $in  = Carbon::parse($request->query('check_in'))->toDateString();
+        $out = Carbon::parse($request->query('check_out'))->toDateString();
+
+        $result = $hotel->habitaciones->map(function (Habitacion $h) use ($in, $out) {
+            // Unidades ocupadas en el rango
+            $ocupadas = $h->reservas()
+                ->whereIn('estado', ['pendiente', 'confirmada'])
+                ->whereDate('fecha_inicio', '<',  $out)
+                ->whereDate('fecha_fin',    '>',  $in)
+                ->sum('cantidad');
+
+            $disponibles = max(0, $h->cantidad - $ocupadas);
+
+            return [
+                'id'                 => $h->id,
+                'nombre'             => $h->nombre,
+                'capacidad_adultos'  => $h->capacidad_adultos,
+                'capacidad_ninos'    => $h->capacidad_ninos,
+                'precio_por_noche'   => (float) $h->precio_por_noche,
+                'unidades_disponibles' => $disponibles,
+            ];
+        });
+
+        return response()->json([
+            'hotel'        => $hotel->only('servicio_id','direccion','estrellas'),
+            'check_in'     => $in,
+            'check_out'    => $out,
+            'habitaciones' => $result,
+        ], 200);
     }
 }

@@ -2,32 +2,30 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Servicio;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreHotelRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+        if (!$user || $user->rol !== 'proveedor') return false;
+
+        // Debe ser dueño del servicio y el servicio debe ser tipo hotel
+        $servicioId = (int) $this->input('servicio_id');
+        $servicio = Servicio::find($servicioId);
+        return $servicio
+            && $servicio->tipo === 'hotel'
+            && $servicio->proveedor_id === $user->id;
     }
 
     public function rules(): array
     {
         return [
-            // Datos del servicio
-            'proveedor_id' => ['required', 'integer', 'exists:usuarios,id'],
-            'nombre' => ['required', 'string', 'max:150'],
-            'descripcion' => ['nullable', 'string'],
-            'ciudad' => ['required', 'string', 'max:100'],
-            'precio' => ['required', 'numeric', 'min:0'],
-            'horario_inicio' => ['nullable', 'date_format:H:i'],
-            'horario_fin' => ['nullable', 'date_format:H:i', 'after:horario_inicio'],
-            'imagen_url' => ['nullable', 'url', 'max:500'],
-            
-            // Datos específicos del hotel
-            'direccion' => ['required', 'string', 'max:255'],
-            'estrellas' => ['nullable', 'integer', 'min:1', 'max:5'],
-            'precio_por_noche' => ['required', 'numeric', 'min:0'],
+            'servicio_id' => ['required','integer','exists:servicios,id'],
+            'direccion'   => ['required','string','max:255'],
+            'estrellas'   => ['nullable','integer','min:1','max:5'],
         ];
     }
 }

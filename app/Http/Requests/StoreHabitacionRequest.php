@@ -3,17 +3,15 @@
 namespace App\Http\Requests;
 
 use App\Models\Servicio;
-use App\Models\Hotel;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateHotelRequest extends FormRequest
+class StoreHabitacionRequest extends FormRequest
 {
     public function authorize(): bool
     {
         $user = $this->user();
         if (!$user || $user->rol !== 'proveedor') return false;
 
-        // servicio_id viene en la ruta como {servicio_id}
         $servicioId = (int) $this->route('servicio_id');
         $servicio = Servicio::find($servicioId);
         return $servicio
@@ -24,8 +22,12 @@ class UpdateHotelRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'direccion' => ['sometimes','string','max:255'],
-            'estrellas' => ['sometimes','nullable','integer','min:1','max:5'],
+            'nombre'            => ['required','string','max:100'],
+            'capacidad_adultos' => ['required','integer','min:1'],
+            'capacidad_ninos'   => ['nullable','integer','min:0'],
+            'cantidad'          => ['required','integer','min:1'],
+            'precio_por_noche'  => ['required','numeric','min:0'],
+            'descripcion'       => ['nullable','string'],
         ];
     }
 }

@@ -23,7 +23,7 @@ class Tour extends Model
         'precio_child'
     ];
 
-    // 🔗 Relaciones
+    // Relaciones
     public function servicio()
     {
         return $this->belongsTo(Servicio::class, 'servicio_id');

@@ -37,11 +37,6 @@ class Servicio extends Model
         return $this->hasOne(Hotel::class, 'servicio_id');
     }
 
-    public function tour()
-    {
-        return $this->hasOne(Tour::class, 'servicio_id');
-    }
-
     public function reservas()
     {
         return $this->hasMany(Reserva::class, 'servicio_id');
@@ -58,5 +53,20 @@ class Servicio extends Model
         return $query
             ->when($ciudad, fn($q) => $q->where('ciudad', $ciudad))
             ->when($tipo, fn($q) => $q->where('tipo', $tipo));
+    }
+
+    public function tour()
+    {
+        return $this->hasOne(Tour::class, 'servicio_id');
+    }
+
+    public function salidas()
+    {
+        return $this->hasMany(TourSalida::class, 'servicio_id');
+    }
+
+    public function actividades()
+    {
+        return $this->hasMany(TourActividad::class, 'servicio_id')->orderBy('orden');
     }
 }

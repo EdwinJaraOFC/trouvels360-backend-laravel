@@ -7,6 +7,10 @@ use App\Models\Servicio;
 use App\Models\Hotel;
 use App\Models\Habitacion;
 use App\Models\ReservaHabitacion;
+use App\Models\Tour;
+use App\Models\TourSalida;
+use App\Models\TourActividad;
+use App\Models\ReservaTour;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -33,7 +37,6 @@ class DatabaseSeeder extends Seeder
         Usuario::factory()->proveedor()->count(5)->create();
 
         // --- Servicios / Hoteles / Habitaciones ---
-        // Servicio fijo + Hotel asociado
         $servicioHotel = Servicio::factory()->create([
             'proveedor_id' => $proveedor->id,
             'nombre'       => 'Hotel Cayetano',
@@ -46,12 +49,10 @@ class DatabaseSeeder extends Seeder
             'servicio_id' => $servicioHotel->id,
         ]);
 
-        // Habitaciones del hotel
         $habitaciones = Habitacion::factory()->count(5)->create([
             'servicio_id' => $hotel->servicio_id,
         ]);
 
-        // Reservas de esas habitaciones
         $habitaciones->each(function ($habitacion) {
             ReservaHabitacion::factory()->count(3)->create([
                 'habitacion_id' => $habitacion->id,
@@ -59,7 +60,27 @@ class DatabaseSeeder extends Seeder
         });
 
         // --- Servicios adicionales ---
-        // Lote aleatorio de hoteles y tours
         Servicio::factory()->count(10)->create();
+
+        // --- Tours ---
+        // 1) Crear un tour con 3 salidas y 4 actividades secuenciales
+        $tour = Tour::factory()->create();
+
+        TourSalida::factory()->count(3)->create([
+            'servicio_id' => $tour->servicio_id,
+        ]);
+
+        for ($i = 1; $i <= 4; $i++) {
+            TourActividad::factory()->orden($i)->create([
+                'servicio_id' => $tour->servicio_id,
+            ]);
+        }
+
+        // 2) Crear reservas sobre salidas existentes
+        TourSalida::factory()->count(2)->create()->each(function ($salida) {
+            ReservaTour::factory()->count(3)->create([
+                'salida_id' => $salida->id,
+            ]);
+        });
     }
 }

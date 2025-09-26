@@ -7,6 +7,10 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\HotelController;
 use App\Http\Controllers\Api\HabitacionController;
 use App\Http\Controllers\Api\ReservaHabitacionController;
+use App\Http\Controllers\Api\TourController;
+use App\Http\Controllers\Api\TourSalidaController;
+use App\Http\Controllers\Api\TourActividadController;
+use App\Http\Controllers\Api\ReservaTourController;
 
 // Healthcheck
 Route::get('ping', fn () => response()->json(['pong' => true]));
@@ -62,4 +66,36 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('reservas-habitaciones', [ReservaHabitacionController::class, 'store']); // crear reserva
     Route::post('reservas-habitaciones/{reserva}/cancelar', [ReservaHabitacionController::class, 'cancelar']);
     Route::get('mis-reservas', [ReservaHabitacionController::class, 'misReservas']); // viajero autenticado
+});
+
+// Listado público
+Route::get('tours', [TourController::class, 'index']);
+Route::get('tours/{tour}', [TourController::class, 'show']);
+Route::get('tours/{tour}/salidas', [TourSalidaController::class, 'index']);
+Route::get('tours/{tour}/actividades', [TourActividadController::class, 'index']);
+
+// Protegido
+Route::middleware('auth:sanctum')->group(function () {
+    // Tours (solo proveedor dueño)
+    Route::post('tours', [TourController::class, 'store']);
+    Route::put('tours/{tour}', [TourController::class, 'update']);
+    Route::patch('tours/{tour}', [TourController::class, 'update']);
+    Route::delete('tours/{tour}', [TourController::class, 'destroy']);
+
+    // Salidas (solo proveedor dueño del tour)
+    Route::post('tours/{tour}/salidas', [TourSalidaController::class, 'store']);
+    Route::put('tours/{tour}/salidas/{salida}', [TourSalidaController::class, 'update']);
+    Route::patch('tours/{tour}/salidas/{salida}', [TourSalidaController::class, 'update']);
+    Route::delete('tours/{tour}/salidas/{salida}', [TourSalidaController::class, 'destroy']);
+
+    // Actividades (solo proveedor dueño del tour)
+    Route::post('tours/{tour}/actividades', [TourActividadController::class, 'store']);
+    Route::put('tours/{tour}/actividades/{actividad}', [TourActividadController::class, 'update']);
+    Route::patch('tours/{tour}/actividades/{actividad}', [TourActividadController::class, 'update']);
+    Route::delete('tours/{tour}/actividades/{actividad}', [TourActividadController::class, 'destroy']);
+
+    // Reservas de tour (viajero)
+    Route::post('tours/salidas/{salida}/reservas', [ReservaTourController::class, 'store']);
+    Route::post('tours/reservas/{reserva}/cancelar', [ReservaTourController::class, 'cancelar']);
+    Route::get('tours/mis-reservas', [ReservaTourController::class, 'misReservas']);
 });

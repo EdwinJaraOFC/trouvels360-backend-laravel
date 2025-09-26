@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    /** Define configuración base del tour (precio único y capacidad por salida por defecto). */
+    public function up(): void
+    {
+        Schema::create('tours', function (Blueprint $table) {
+            $table->unsignedBigInteger('servicio_id')->primary(); // PK = FK a servicios.id
+            $table->string('categoria', 100)->nullable();
+            $table->unsignedSmallInteger('duracion_min')->nullable();     // ej. 240 = 4h
+            $table->decimal('precio_persona', 10, 2);                      // precio único por persona
+            $table->unsignedSmallInteger('capacidad_por_salida')->nullable(); // default para salidas
+            $table->timestamps();
+
+            $table->foreign('servicio_id')
+                ->references('id')->on('servicios')
+                ->onDelete('cascade'); // si se elimina el servicio, cae el tour
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('tours');
+    }
+};

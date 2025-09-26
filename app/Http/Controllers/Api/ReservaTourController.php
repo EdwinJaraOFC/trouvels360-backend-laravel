@@ -3,125 +3,118 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreReservaTourRequest;
 use App\Models\ReservaTour;
+use App\Models\Servicio;
 use App\Models\TourSalida;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Support\Carbon; // <-- importa Carbon
-
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ReservaTourController extends Controller
 {
-    // POST /api/tours/salidas/{salida}/reservas  (viajero)
-    public function store(StoreReservaTourRequest $request, TourSalida $salida): JsonResponse
+    /** POST /api/tours/salidas/{salida}/reservas  (viajero autenticado) */
+    public function store(Request $req, $salida)
     {
-        $user = $request->user();
-
-        if ($user->rol !== 'viajero') {
-            return response()->json(['message'=>'No autorizado: solo viajeros pueden reservar.'], 403);
+        $user = Auth::user();
+        if (!$user || $user->rol !== 'viajero') {
+            abort(403, 'Solo viajeros pueden crear reservas de tour.');
         }
 
-        if ($salida->estado !== 'abierta') {
-            return response()->json(['message'=>'La salida no está abierta a reservas.'], 422);
-        }
-
-        $personas = (int) $request->input('personas');
-
-        // verificar cupo
-        $disponible = (int)$salida->cupo_total - (int)$salida->cupo_reservado;
-        if ($personas > $disponible) {
-            return response()->json(['message'=>"Cupo insuficiente. Disponible: {$disponible}"], 422);
-        }
-
-        // snapshot precio desde Tour
-        $precioUnit = (float) $salida->tour->precio_persona;
-
-        $reserva = ReservaTour::create([
-            'codigo_reserva'  => strtoupper(Str::random(10)),
-            'usuario_id'      => $user->id,
-            'salida_id'       => $salida->id,
-            'personas'        => $personas,
-            'estado'          => 'pendiente',
-            'precio_unitario' => number_format($precioUnit, 2, '.', ''),
-            'total'           => number_format($precioUnit * $personas, 2, '.', ''),
+        $data = $req->validate([
+            'personas' => ['required','integer','min:1','max:1000'],
         ]);
 
-        // incrementar cupo_reservado
-        $salida->cupo_reservado = min($salida->cupo_total, $salida->cupo_reservado + $personas);
-        $salida->save();
+        $reserva = DB::transaction(function() use ($salida, $data, $user) {
+            // Lock para evitar sobreventa
+            $sal = TourSalida::where('id',$salida)->lockForUpdate()->firstOrFail();
+
+            if ($sal->estado !== 'programada') {
+                throw ValidationException::withMessages(['salida' => 'La salida no está disponible para reservar.']);
+            }
+
+            $disponible = $sal->cupo_total - $sal->cupo_reservado;
+            if ($data['personas'] > $disponible) {
+                throw ValidationException::withMessages([
+                    'personas' => "Cupo insuficiente. Disponible: $disponible"
+                ]);
+            }
+
+            // Precio snapshot desde tour (servicio->tour)
+            $serv = Servicio::with('tour')->findOrFail($sal->servicio_id);
+            $precioUnit = (float)$serv->tour->precio_persona;
+
+            // Actualiza ocupación
+            $sal->cupo_reservado += $data['personas'];
+            $sal->save();
+
+            // Código de reserva
+            $codigo = strtoupper(bin2hex(random_bytes(5)));
+
+            return ReservaTour::create([
+                'codigo_reserva' => $codigo,
+                'usuario_id'     => $user->id,
+                'salida_id'      => $sal->id,
+                'personas'       => $data['personas'],
+                'estado'         => 'confirmada', // o 'pendiente' si integras pagos
+                'precio_unitario'=> $precioUnit,
+                'total'          => round($precioUnit * $data['personas'], 2),
+            ]);
+        });
 
         return response()->json([
-            'message' => 'Reserva creada correctamente.',
-            'data'    => $reserva->only('id','codigo_reserva','usuario_id','salida_id','personas','estado','precio_unitario','total','created_at'),
+            'reserva_id' => $reserva->id,
+            'codigo'     => $reserva->codigo_reserva,
+            'total'      => (float)$reserva->total,
+            'estado'     => $reserva->estado,
         ], 201);
     }
 
-    // POST /api/tours/reservas/{reserva}/cancelar  (viajero dueño)
-    public function cancelar(Request $request, ReservaTour $reserva): JsonResponse
+    /** POST /api/tours/reservas/{reserva}/cancelar  (dueño de la reserva) */
+    public function cancelar($reserva)
     {
-        $user = $request->user();
+        $user = Auth::user();
+        if (!$user) abort(401);
 
-        if ($user->id !== $reserva->usuario_id) {
-            return response()->json(['message'=>'No autorizado.'], 403);
+        $res = ReservaTour::with('salida')->findOrFail($reserva);
+        if ((int)$res->usuario_id !== (int)$user->id) {
+            abort(403, 'No autorizado: no eres el dueño de esta reserva.');
         }
 
-        if ($reserva->estado === 'cancelada') {
-            return response()->json(['message'=>'La reserva ya está cancelada.'], 422);
+        if ($res->estado === 'cancelada') {
+            return response()->json(['message' => 'La reserva ya está cancelada.']);
         }
 
-        // liberar cupos
-        $salida = $reserva->salida;
-        $salida->cupo_reservado = max(0, $salida->cupo_reservado - (int)$reserva->personas);
-        $salida->save();
+        DB::transaction(function() use ($res) {
+            // Liberar cupo sólo si estaba confirmada
+            if ($res->estado === 'confirmada') {
+                $sal = TourSalida::where('id',$res->salida_id)->lockForUpdate()->first();
+                if ($sal && $sal->cupo_reservado >= $res->personas) {
+                    $sal->cupo_reservado -= $res->personas;
+                    $sal->save();
+                }
+            }
+            $res->estado = 'cancelada';
+            $res->save();
+        });
 
-        $reserva->estado = 'cancelada';
-        $reserva->save();
-
-        return response()->json(['message'=>'Reserva cancelada.'], 200);
+        return response()->json(['message' => 'Reserva cancelada']);
     }
 
-    // GET /api/tours/mis-reservas  (viajero)
-    public function misReservas(Request $request): JsonResponse
+    /** GET /api/tours/mis-reservas  (viajero autenticado) */
+    public function misReservas(Request $req)
     {
-        $user = $request->user();
+        $user = Auth::user();
+        if (!$user || $user->rol !== 'viajero') abort(403);
 
-        $res = ReservaTour::with(['salida.tour.servicio'])
-            ->where('usuario_id', $user->id)
-            ->orderByDesc('id')
-            ->get()
-            ->map(function (ReservaTour $r) {
-                $fecha = $r->salida->fecha
-                    ? Carbon::parse($r->salida->fecha)->toDateString()
-                    : null;
+        $q = ReservaTour::query()
+            ->where('usuario_id',$user->id)
+            ->with(['salida' => function($s){
+                $s->select(['id','servicio_id','fecha','hora','cupo_total','cupo_reservado','estado']);
+            }]);
 
-                $hora = $r->salida->hora
-                    ? Carbon::parse($r->salida->hora)->format('H:i')
-                    : null;
+        if ($req->filled('estado')) $q->where('estado', $req->query('estado'));
 
-                return [
-                    'id'             => $r->id,
-                    'codigo_reserva' => $r->codigo_reserva,
-                    'estado'         => $r->estado,
-                    'personas'       => (int) $r->personas,
-                    'precio_unitario'=> (float) $r->precio_unitario,
-                    'total'          => (float) $r->total,
-                    'salida'         => [
-                        'id'    => $r->salida->id,
-                        'fecha' => $fecha,
-                        'hora'  => $hora,
-                        'tour'  => [
-                            'servicio_id'    => $r->salida->tour->servicio_id,
-                            'nombre'         => $r->salida->tour->servicio->nombre,
-                            'ciudad'         => $r->salida->tour->servicio->ciudad,
-                            'precio_persona' => (float) $r->salida->tour->precio_persona,
-                        ],
-                    ],
-                    'created_at'     => $r->created_at,
-                ];
-            });
-
-        return response()->json($res, 200);
+        return $q->orderByDesc('created_at')->paginate(20);
     }
 }

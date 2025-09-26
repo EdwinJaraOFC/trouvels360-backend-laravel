@@ -3,82 +3,85 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreTourActividadRequest;
-use App\Http\Requests\UpdateTourActividadRequest;
-use App\Models\Tour;
+use App\Models\Servicio;
 use App\Models\TourActividad;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class TourActividadController extends Controller
 {
-    // GET /api/tours/{tour}/actividades (público)
-    public function index(Tour $tour): JsonResponse
+    /** GET /api/tours/{tour}/actividades  (público) */
+    public function index($tour)
     {
-        $actividades = $tour->actividades()->orderBy('orden')->get();
-        return response()->json($actividades, 200);
+        $serv = Servicio::where('tipo','tour')->findOrFail($tour);
+        return $serv->actividades()->orderBy('orden')->get();
     }
 
-    // POST /api/tours/{tour}/actividades (proveedor dueño)
-    public function store(StoreTourActividadRequest $request, Tour $tour): JsonResponse
+    /** POST /api/tours/{tour}/actividades  (proveedor dueño) */
+    public function store(Request $req, $tour)
     {
-        $user = $request->user();
-        if ($user->rol !== 'proveedor' || $tour->servicio->proveedor_id !== $user->id) {
-            return response()->json(['message'=>'No autorizado.'], 403);
-        }
+        $serv = Servicio::where('tipo','tour')->findOrFail($tour);
+        $this->assertOwnership($serv);
 
-        $data = $request->validated();
+        $data = $req->validate([
+            'titulo'        => ['required','string','max:150'],
+            'descripcion'   => ['nullable','string'],
+            'orden'         => ['nullable','integer','min:1'],
+            'duracion_min'  => ['nullable','integer','min:0'],
+            'direccion'     => ['nullable','string','max:255'],
+            'imagen_url'    => ['nullable','url'],
+        ]);
 
-        // Si no se envía 'orden', asignar el siguiente
-        if (!isset($data['orden'])) {
-            $max = $tour->actividades()->max('orden');
-            $data['orden'] = (int) $max + 1;
-        }
+        $act = $serv->actividades()->create([
+            'titulo'       => $data['titulo'],
+            'descripcion'  => $data['descripcion'] ?? null,
+            'orden'        => $data['orden'] ?? 1,
+            'duracion_min' => $data['duracion_min'] ?? null,
+            'direccion'    => $data['direccion'] ?? null,
+            'imagen_url'   => $data['imagen_url'] ?? null,
+        ]);
 
-        $actividad = $tour->actividades()->create($data);
-
-        return response()->json([
-            'message' => 'Actividad creada correctamente.',
-            'data'    => $actividad,
-        ], 201);
+        return response()->json($act, 201);
     }
 
-    // PUT/PATCH /api/tours/{tour}/actividades/{actividad}
-    public function update(UpdateTourActividadRequest $request, Tour $tour, TourActividad $actividad): JsonResponse
+    /** PUT/PATCH /api/tours/{tour}/actividades/{actividad}  (proveedor dueño) */
+    public function update(Request $req, $tour, $actividad)
     {
-        $user = $request->user();
-        if ($user->rol !== 'proveedor' || $tour->servicio->proveedor_id !== $user->id || $actividad->servicio_id !== $tour->servicio_id) {
-            return response()->json(['message'=>'No autorizado.'], 403);
-        }
+        $serv = Servicio::where('tipo','tour')->findOrFail($tour);
+        $this->assertOwnership($serv);
 
-        $data = $request->validated();
+        $act = TourActividad::where('id',$actividad)->where('servicio_id',$serv->id)->firstOrFail();
 
-        // Si cambia orden, valida unicidad manual (por si el validador no lo cubre)
-        if (isset($data['orden']) && $data['orden'] !== $actividad->orden) {
-            $exists = $tour->actividades()->where('orden', $data['orden'])->exists();
-            if ($exists) {
-                return response()->json(['message'=>'El orden ya existe para este tour.'], 422);
-            }
-        }
+        $data = $req->validate([
+            'titulo'        => ['sometimes','string','max:150'],
+            'descripcion'   => ['sometimes','nullable','string'],
+            'orden'         => ['sometimes','integer','min:1'],
+            'duracion_min'  => ['sometimes','nullable','integer','min:0'],
+            'direccion'     => ['sometimes','nullable','string','max:255'],
+            'imagen_url'    => ['sometimes','nullable','url'],
+        ]);
 
-        $actividad->update($data);
-        $actividad->refresh();
-
-        return response()->json([
-            'message' => 'Actividad actualizada correctamente.',
-            'data'    => $actividad,
-        ], 200);
+        $act->fill($data)->save();
+        return $act;
     }
 
-    // DELETE /api/tours/{tour}/actividades/{actividad}
-    public function destroy(Request $request, Tour $tour, TourActividad $actividad): JsonResponse
+    /** DELETE /api/tours/{tour}/actividades/{actividad}  (proveedor dueño) */
+    public function destroy($tour, $actividad)
     {
-        $user = $request->user();
-        if ($user->rol !== 'proveedor' || $tour->servicio->proveedor_id !== $user->id || $actividad->servicio_id !== $tour->servicio_id) {
-            return response()->json(['message'=>'No autorizado.'], 403);
-        }
+        $serv = Servicio::where('tipo','tour')->findOrFail($tour);
+        $this->assertOwnership($serv);
 
-        $actividad->delete();
-        return response()->json(null, 204);
+        $act = TourActividad::where('id',$actividad)->where('servicio_id',$serv->id)->firstOrFail();
+        $act->delete();
+
+        return response()->json(['message' => 'Actividad eliminada']);
+    }
+
+    private function assertOwnership(Servicio $serv): void
+    {
+        $user = Auth::user();
+        if (!$user || $user->rol !== 'proveedor' || (int)$user->id !== (int)$serv->proveedor_id) {
+            abort(403, 'No autorizado: no eres el proveedor dueño de este tour.');
+        }
     }
 }

@@ -3,84 +3,124 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreTourSalidaRequest;
-use App\Http\Requests\UpdateTourSalidaRequest;
-use App\Models\Tour;
+use App\Models\Servicio;
 use App\Models\TourSalida;
-use Illuminate\Http\JsonResponse;
+use App\Models\ReservaTour;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class TourSalidaController extends Controller
 {
-    // GET /api/tours/{tour}/salidas (público)
-    public function index(Tour $tour): JsonResponse
+    /** GET /api/tours/{tour}/salidas?desde=&hasta=&estado=  (público) */
+    public function index(Request $req, $tour)
     {
-        $salidas = $tour->salidas()->orderBy('fecha')->orderBy('hora')->get(['id','servicio_id','fecha','hora','cupo_total','cupo_reservado','estado']);
-        return response()->json($salidas, 200);
+        $serv = Servicio::where('tipo','tour')->findOrFail($tour);
+
+        $q = $serv->salidas()->newQuery();
+        if ($req->filled('estado')) $q->where('estado', $req->query('estado'));
+        if ($req->filled('desde'))  $q->whereDate('fecha','>=',$req->query('desde'));
+        if ($req->filled('hasta'))  $q->whereDate('fecha','<=',$req->query('hasta'));
+
+        return $q->orderBy('fecha')->orderBy('hora')->get()->map(function($s){
+            return [
+                'id' => $s->id,
+                'servicio_id' => $s->servicio_id,
+                'fecha' => $s->fecha?->format('Y-m-d'),
+                'hora' => $s->hora?->format('H:i'),
+                'cupo_total' => (int)$s->cupo_total,
+                'cupo_reservado' => (int)$s->cupo_reservado,
+                'cupo_disponible' => (int)max(0, $s->cupo_total - $s->cupo_reservado),
+                'estado' => $s->estado,
+            ];
+        });
     }
 
-    // POST /api/tours/{tour}/salidas (proveedor dueño)
-    public function store(StoreTourSalidaRequest $request, Tour $tour): JsonResponse
+    /** POST /api/tours/{tour}/salidas  (proveedor dueño) */
+    public function store(Request $req, $tour)
     {
-        $user = $request->user();
-        if ($user->rol !== 'proveedor' || $tour->servicio->proveedor_id !== $user->id) {
-            return response()->json(['message'=>'No autorizado.'], 403);
-        }
+        $serv = Servicio::where('tipo','tour')->findOrFail($tour);
+        $this->assertOwnership($serv);
 
-        // Validar cupos vs Tour.capacidad (opcional, como línea base)
-        if ($request->integer('cupo_total') > (int)$tour->capacidad) {
-            return response()->json(['message' => 'cupo_total no puede exceder la capacidad del tour.'], 422);
-        }
-
-        $salida = $tour->salidas()->create([
-            'fecha'      => $request->date('fecha'),
-            'hora'       => $request->input('hora'), // nullable
-            'cupo_total' => $request->integer('cupo_total'),
-            'estado'     => $request->input('estado', 'abierta'),
+        $data = $req->validate([
+            'fecha'      => ['required','date'],
+            'hora'       => ['required','date_format:H:i'],
+            'cupo_total' => ['nullable','integer','min:1'],
+            'estado'     => ['sometimes','in:programada,cerrada,cancelada'],
         ]);
 
-        return response()->json([
-            'message' => 'Salida creada correctamente.',
-            'data'    => $salida->only('id','servicio_id','fecha','hora','cupo_total','cupo_reservado','estado'),
-        ], 201);
+        $cupo = (int)($data['cupo_total'] ?? $serv->tour?->capacidad_por_salida ?? 0);
+        if ($cupo < 1) {
+            throw ValidationException::withMessages([
+                'cupo_total' => 'Debe especificar cupo_total o configurar capacidad_por_salida en el tour.'
+            ]);
+        }
+
+        try {
+            $salida = $serv->salidas()->create([
+                'fecha' => $data['fecha'],
+                'hora'  => $data['hora'],
+                'cupo_total' => $cupo,
+                'estado' => $data['estado'] ?? 'programada',
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            throw ValidationException::withMessages([
+                'fecha' => 'Ya existe una salida programada para esa fecha y hora.'
+            ]);
+        }
+
+        return response()->json($salida, 201);
     }
 
-    // PUT/PATCH /api/tours/{tour}/salidas/{salida}
-    public function update(UpdateTourSalidaRequest $request, Tour $tour, TourSalida $salida): JsonResponse
+    /** PUT/PATCH /api/tours/{tour}/salidas/{salida}  (proveedor dueño) */
+    public function update(Request $req, $tour, $salida)
     {
-        $user = $request->user();
-        if ($user->rol !== 'proveedor' || $tour->servicio->proveedor_id !== $user->id || $salida->servicio_id !== $tour->servicio_id) {
-            return response()->json(['message'=>'No autorizado.'], 403);
+        $serv = Servicio::where('tipo','tour')->findOrFail($tour);
+        $this->assertOwnership($serv);
+
+        $sal = TourSalida::where('id',$salida)->where('servicio_id',$serv->id)->firstOrFail();
+
+        $data = $req->validate([
+            'fecha'      => ['sometimes','date'],
+            'hora'       => ['sometimes','date_format:H:i'],
+            'cupo_total' => ['sometimes','integer','min:1'],
+            'estado'     => ['sometimes','in:programada,cerrada,cancelada'],
+        ]);
+
+        if (array_key_exists('cupo_total', $data) && $data['cupo_total'] < $sal->cupo_reservado) {
+            throw ValidationException::withMessages([
+                'cupo_total' => 'No puedes establecer un cupo_total menor a lo ya reservado.'
+            ]);
         }
 
-        // Evitar poner cupo_total < cupo_reservado
-        if ($request->filled('cupo_total') && $request->integer('cupo_total') < (int)$salida->cupo_reservado) {
-            return response()->json(['message' => 'cupo_total no puede ser menor al cupo ya reservado.'], 422);
-        }
-
-        $salida->update($request->validated());
-        $salida->refresh();
-
-        return response()->json([
-            'message' => 'Salida actualizada correctamente.',
-            'data'    => $salida->only('id','servicio_id','fecha','hora','cupo_total','cupo_reservado','estado'),
-        ], 200);
+        $sal->fill($data)->save();
+        return $sal;
     }
 
-    // DELETE /api/tours/{tour}/salidas/{salida}
-    public function destroy(Request $request, Tour $tour, TourSalida $salida): JsonResponse
+    /** DELETE /api/tours/{tour}/salidas/{salida}  (proveedor dueño) */
+    public function destroy($tour, $salida)
     {
-        $user = $request->user();
-        if ($user->rol !== 'proveedor' || $tour->servicio->proveedor_id !== $user->id || $salida->servicio_id !== $tour->servicio_id) {
-            return response()->json(['message'=>'No autorizado.'], 403);
+        $serv = Servicio::where('tipo','tour')->findOrFail($tour);
+        $this->assertOwnership($serv);
+
+        $sal = TourSalida::where('id',$salida)->where('servicio_id',$serv->id)->firstOrFail();
+
+        // Bloquear si tiene reservas confirmadas
+        if (ReservaTour::where('salida_id',$sal->id)->where('estado','confirmada')->exists()) {
+            throw ValidationException::withMessages([
+                'salida' => 'No se puede eliminar una salida con reservas confirmadas.'
+            ]);
         }
 
-        // (opcional) bloquear si hay reservas confirmadas
-        if ($salida->reservas()->where('estado','confirmada')->exists()) {
-            return response()->json(['message'=>'No se puede eliminar: existen reservas confirmadas.'], 422);
-        }
+        $sal->delete();
+        return response()->json(['message' => 'Salida eliminada']);
+    }
 
-        $salida->delete();
-        return response()->json(null, 204);
+    private function assertOwnership(Servicio $serv): void
+    {
+        $user = Auth::user();
+        if (!$user || $user->rol !== 'proveedor' || (int)$user->id !== (int)$serv->proveedor_id) {
+            abort(403, 'No autorizado: no eres el proveedor dueño de este tour.');
+        }
     }
 }

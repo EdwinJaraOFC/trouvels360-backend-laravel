@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('hoteles', function (Blueprint $table) {
             // Relación 1:1 con servicios (solo aplica cuando servicios.tipo = 'hotel')
             $table->unsignedBigInteger('servicio_id')->primary();
-
+            $table->string('nombre', 150);
             $table->string('direccion', 255);
             $table->unsignedTinyInteger('estrellas')->nullable(); // 1..5
 

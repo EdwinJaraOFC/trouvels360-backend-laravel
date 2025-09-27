@@ -49,6 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Hoteles (detalle y disponibilidad) – listar hoteles se hace por /servicios?tipo=hotel
+Route::apiResource('hoteles', HotelController::class);
 Route::get('hoteles/{servicio_id}', [HotelController::class, 'show'])->whereNumber('servicio_id'); // público
 Route::get('hoteles/{servicio_id}/disponibilidad', [HotelController::class, 'disponibilidad'])->whereNumber('servicio_id'); // público
 

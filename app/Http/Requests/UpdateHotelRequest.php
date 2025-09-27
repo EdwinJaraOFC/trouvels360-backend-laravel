@@ -24,6 +24,7 @@ class UpdateHotelRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'nombre'    => ['sometimes','string','max:150'],
             'direccion' => ['sometimes','string','max:255'],
             'estrellas' => ['sometimes','nullable','integer','min:1','max:5'],
         ];

@@ -19,6 +19,7 @@ class Hotel extends Model
 
     protected $fillable = [
         'servicio_id',
+        'nombre',
         'direccion',
         'estrellas',
     ];

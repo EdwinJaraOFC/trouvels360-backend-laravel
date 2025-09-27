@@ -24,6 +24,7 @@ class StoreHotelRequest extends FormRequest
     {
         return [
             'servicio_id' => ['required','integer','exists:servicios,id'],
+            'nombre'      => ['required','string','max:150'],
             'direccion'   => ['required','string','max:255'],
             'estrellas'   => ['nullable','integer','min:1','max:5'],
         ];

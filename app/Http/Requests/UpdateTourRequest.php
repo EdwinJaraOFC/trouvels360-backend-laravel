@@ -14,7 +14,7 @@ class UpdateTourRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'categoria'            => ['sometimes','nullable','string','max:100'],
+            'categoria'            => ['sometimes','in:Gastronomía,Aventura,Cultura,Relajación'],
             'duracion_min'         => ['sometimes','nullable','integer','min:1','max:1440'],
             'precio_persona'       => ['sometimes','numeric','min:0'],
             'capacidad_por_salida' => ['sometimes','integer','min:1'],

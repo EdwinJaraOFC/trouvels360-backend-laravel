@@ -10,7 +10,7 @@ return new class extends Migration {
     {
         Schema::create('tours', function (Blueprint $table) {
             $table->unsignedBigInteger('servicio_id')->primary(); // PK = FK a servicios.id
-            $table->string('categoria', 100)->nullable();
+            $table->enum('categoria',['Gastronomía','Aventura','Cultura','Relajación']);
             $table->unsignedSmallInteger('duracion_min')->nullable();     // ej. 240 = 4h
             $table->decimal('precio_persona', 10, 2);                      // precio único por persona
             $table->unsignedSmallInteger('capacidad_por_salida')->nullable(); // default para salidas

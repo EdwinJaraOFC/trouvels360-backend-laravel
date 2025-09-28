@@ -29,7 +29,7 @@ class StoreTourRequest extends FormRequest
                 // existe en servicios y es de tipo 'tour'
                 Rule::exists('servicios','id')->where(fn($q) => $q->where('tipo','tour')),
             ],
-            'categoria'            => ['nullable','string','max:100'],
+            'categoria'            => ['required','in:Gastronomía,Aventura,Cultura,Relajación'],
             'duracion_min'         => ['nullable','integer','min:1','max:1440'],
             'precio_persona'       => ['required','numeric','min:0'],
             'capacidad_por_salida' => ['required','integer','min:1'],

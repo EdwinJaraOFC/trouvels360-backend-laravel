@@ -19,6 +19,8 @@ cd C:\xampp\htdocs\laravel\trouvels360-backend-laravel
 
 docker-compose up --build -d
 
+docker-compose exec app composer install
+
 bash scripts/dev-init.sh --seed             
 ```
 
@@ -27,6 +29,8 @@ bash scripts/dev-init.sh --seed
 cd /ruta/al/proyecto/trouvels360-backend-laravel
 
 docker-compose up --build -d
+
+docker-compose exec app composer install
 
 bash scripts/dev-init.sh --seed      
 ```

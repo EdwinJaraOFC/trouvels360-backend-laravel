@@ -49,7 +49,7 @@ RUN chown -R www-data:www-data storage bootstrap/cache \
 RUN if [ ! -f .env ]; then cp .env.example .env; fi
 
 # Copiar script de inicialización
-COPY railway-deploy.sh /usr/local/bin/
+COPY scripts/railway-deploy.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/railway-deploy.sh
 
 # Variables para PHP

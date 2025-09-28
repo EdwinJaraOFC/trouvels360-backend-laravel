@@ -1,8 +1,12 @@
 *.log
+.log
+# Las variables reales (.env, .env.docker) NO deben versionarse.
 .DS_Store
 .env
 .env.backup
 .env.production
+.env.xampp.backup
+# Mantén solo archivos de ejemplo como .env.docker.example
 .phpactor.json
 .phpunit.result.cache
 /.fleet

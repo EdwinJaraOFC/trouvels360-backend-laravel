@@ -59,6 +59,18 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "post-install-cmd": [
+            "@php artisan clear-compiled",
+            "@php artisan optimize",
+            "@php artisan config:cache",
+            "@php artisan route:cache",
+            "@php artisan view:cache"
+        ],
+        "production": [
+            "npm ci --only=production",
+            "npm run build",
+            "composer install --optimize-autoloader --no-dev"
         ]
     },
     "extra": {

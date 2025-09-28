@@ -40,6 +40,16 @@ COPY . .
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
+# Ejecutar optimizaciones para producción
+RUN php artisan config:clear \
+    && php artisan config:cache \
+    && php artisan route:cache \
+    && php artisan view:cache
+
+# Crear archivo de clave de aplicación si no existe
+RUN if [ ! -f .env ]; then cp .env.example .env; fi \
+    && php artisan key:generate --force
+
 # Variables útiles para runtime (no secretas)
 ENV PHP_OPCACHE_VALIDATE_TIMESTAMPS=1 \
     PHP_OPCACHE_MAX_ACCELERATED_FILES=10000 \

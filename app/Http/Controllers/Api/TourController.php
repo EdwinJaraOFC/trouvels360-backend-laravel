@@ -12,23 +12,25 @@ use Illuminate\Validation\ValidationException;
 
 class TourController extends Controller
 {
-    /** GET /api/tours?q=&ciudad=&categoria=&proveedor_id=&activo=&fecha=&sort=&page&per_page */
+    /** GET /api/tours?q=&ciudad=&pais=&categoria=&proveedor_id=&activo=&fecha=&sort=&page&per_page */
     public function index(Request $req)
     {
         $q = Servicio::query()
             ->where('tipo', 'tour')
             ->with('tour')
-            ->select(['id','proveedor_id','nombre','tipo','descripcion','ciudad','imagen_url','activo','created_at']);
+            ->select(['id','proveedor_id','nombre','tipo','descripcion','ciudad','pais','imagen_url','activo','created_at']); // <- añadido 'pais'
 
         // Filtros básicos
         if ($term = $req->query('q')) {
             $q->where(function($qq) use ($term) {
                 $qq->where('nombre','like',"%$term%")
                    ->orWhere('descripcion','like',"%$term%")
-                   ->orWhere('ciudad','like',"%$term%");
+                   ->orWhere('ciudad','like',"%$term%")
+                   ->orWhere('pais','like',"%$term%"); // <- permite buscar por país en q
             });
         }
         if ($req->filled('ciudad'))       $q->where('ciudad', $req->query('ciudad'));
+        if ($req->filled('pais'))         $q->where('pais', $req->query('pais')); // <- filtro por país
         if ($req->filled('proveedor_id')) $q->where('proveedor_id', $req->query('proveedor_id'));
         if ($req->has('activo'))          $q->where('activo', filter_var($req->query('activo'), FILTER_VALIDATE_BOOLEAN));
 
@@ -51,7 +53,7 @@ class TourController extends Controller
             foreach (explode(',', $sort) as $s) {
                 $dir = str_starts_with($s, '-') ? 'desc' : 'asc';
                 $col = ltrim($s, '-');
-                if (in_array($col, ['nombre','ciudad','created_at'])) $q->orderBy($col, $dir);
+                if (in_array($col, ['nombre','ciudad','pais','created_at'])) $q->orderBy($col, $dir); // <- soporta ordenar por país
                 if ($col === 'precio') { // ordenar por tours.precio_persona
                     $q->join('tours','tours.servicio_id','=','servicios.id')
                       ->orderBy('tours.precio_persona', $dir)
@@ -90,6 +92,7 @@ class TourController extends Controller
             'nombre'       => ['required','string','max:150'],
             'descripcion'  => ['nullable','string'],
             'ciudad'       => ['required','string','max:100'],
+            'pais'         => ['required','string','max:100'], // <- REQUERIDO
             'imagen_url'   => ['nullable','url'],
             'activo'       => ['boolean'],
 
@@ -106,6 +109,7 @@ class TourController extends Controller
                 'tipo'         => 'tour',
                 'descripcion'  => $data['descripcion'] ?? null,
                 'ciudad'       => $data['ciudad'],
+                'pais'         => $data['pais'], // <- GUARDAR PAÍS
                 'imagen_url'   => $data['imagen_url'] ?? null,
                 'activo'       => $data['activo'] ?? true,
             ]);
@@ -139,6 +143,7 @@ class TourController extends Controller
             'nombre'       => ['sometimes','string','max:150'],
             'descripcion'  => ['sometimes','nullable','string'],
             'ciudad'       => ['sometimes','string','max:100'],
+            'pais'         => ['sometimes','string','max:100'], // <- PERMITIR ACTUALIZAR PAÍS
             'imagen_url'   => ['sometimes','nullable','url'],
             'activo'       => ['sometimes','boolean'],
 
@@ -150,7 +155,7 @@ class TourController extends Controller
 
         DB::transaction(function() use ($serv, $data) {
             $serv->fill(array_intersect_key($data, array_flip([
-                'nombre','descripcion','ciudad','imagen_url','activo'
+                'nombre','descripcion','ciudad','pais','imagen_url','activo' // <- incluye pais
             ])))->save();
 
             if ($serv->tour) {

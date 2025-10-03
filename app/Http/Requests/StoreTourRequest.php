@@ -3,36 +3,31 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreTourRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        // Solo proveedores pueden crear tours
         return auth()->check() && auth()->user()->rol === 'proveedor';
-    }
-
-    protected function prepareForValidation(): void
-    {
-        $this->merge([
-            'categoria'            => $this->categoria ?: null,
-            'duracion_min'         => $this->duracion_min ?: null,
-        ]);
     }
 
     public function rules(): array
     {
         return [
-            'servicio_id'          => [
-                'required',
-                'integer',
-                // existe en servicios y es de tipo 'tour'
-                Rule::exists('servicios','id')->where(fn($q) => $q->where('tipo','tour')),
-            ],
-            'categoria'            => ['required','in:Gastronomía,Aventura,Cultura,Relajación'],
-            'duracion_min'         => ['nullable','integer','min:1','max:1440'],
+            // Campos del SERVICIO
+            'nombre'      => ['required','string','max:150'],
+            'descripcion' => ['nullable','string'],
+            'ciudad'      => ['required','string','max:100'],
+            'pais'        => ['required','string','max:100'], // <- nuevo campo requerido
+            'imagen_url'  => ['nullable','url'],
+            'activo'      => ['boolean'],
+
+            // Campos del TOUR (detalle)
+            'categoria'            => ['nullable','in:Gastronomía,Aventura,Cultura,Relajación'],
+            'duracion_min'         => ['nullable','integer','min:0'],       // 0..1440 si quieres acotar
             'precio_persona'       => ['required','numeric','min:0'],
-            'capacidad_por_salida' => ['required','integer','min:1'],
+            'capacidad_por_salida' => ['nullable','integer','min:1'],
         ];
     }
 }

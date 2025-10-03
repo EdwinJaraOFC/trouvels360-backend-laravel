@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Models\Servicio;
-use App\Models\Hotel;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateHotelRequest extends FormRequest
@@ -11,22 +10,25 @@ class UpdateHotelRequest extends FormRequest
     public function authorize(): bool
     {
         $user = $this->user();
-        if (!$user || $user->rol !== 'proveedor') return false;
+        if (!$user || $user->rol !== 'proveedor') {
+            return false;
+        }
 
         // servicio_id viene en la ruta como {servicio_id}
         $servicioId = (int) $this->route('servicio_id');
         $servicio = Servicio::find($servicioId);
+
         return $servicio
             && $servicio->tipo === 'hotel'
-            && $servicio->proveedor_id === $user->id;
+            && (int) $servicio->proveedor_id === (int) $user->id;
     }
 
     public function rules(): array
     {
         return [
-            'nombre'    => ['sometimes','string','max:150'],
+            // 'nombre' ya no existe en hoteles
             'direccion' => ['sometimes','string','max:255'],
-            'estrellas' => ['sometimes','nullable','integer','min:1','max:5'],
+            'estrellas' => ['sometimes','nullable','integer','between:1,5'],
         ];
     }
 }

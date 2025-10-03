@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Servicio;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreHotelRequest extends FormRequest
@@ -10,23 +9,31 @@ class StoreHotelRequest extends FormRequest
     public function authorize(): bool
     {
         $user = $this->user();
-        if (!$user || $user->rol !== 'proveedor') return false;
+        if (!$user || $user->rol !== 'proveedor') {
+            return false;
+        }
 
-        // Debe ser dueño del servicio y el servicio debe ser tipo hotel
-        $servicioId = (int) $this->input('servicio_id');
-        $servicio = Servicio::find($servicioId);
-        return $servicio
-            && $servicio->tipo === 'hotel'
-            && $servicio->proveedor_id === $user->id;
+        // Crear hotel ahora SIEMPRE crea también el servicio (tipo=hotel).
+        // Exigimos que el proveedor_id enviado sea el del usuario autenticado.
+        $serv = $this->input('servicio', []);
+        return isset($serv['proveedor_id']) && (int)$serv['proveedor_id'] === (int)$user->id;
     }
 
     public function rules(): array
     {
         return [
-            'servicio_id' => ['required','integer','exists:servicios,id'],
-            'nombre'      => ['required','string','max:150'],
-            'direccion'   => ['required','string','max:255'],
-            'estrellas'   => ['nullable','integer','min:1','max:5'],
+            // Datos del Servicio (tipo se fuerza a 'hotel' en el controller)
+            'servicio.proveedor_id' => ['required','integer','exists:usuarios,id'],
+            'servicio.nombre'       => ['required','string','max:150'],
+            'servicio.descripcion'  => ['sometimes','nullable','string'],
+            'servicio.ciudad'       => ['required','string','max:100'],
+            'servicio.pais'         => ['required','string','max:100'],
+            'servicio.imagen_url'   => ['sometimes','nullable','string','max:500'],
+            'servicio.activo'       => ['sometimes','boolean'],
+
+            // Datos del Hotel
+            'direccion'             => ['required','string','max:255'],
+            'estrellas'             => ['nullable','integer','between:1,5'],
         ];
     }
 }

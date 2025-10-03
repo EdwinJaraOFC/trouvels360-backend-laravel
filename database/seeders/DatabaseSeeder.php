@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             'nombre'   => 'Edwin',
             'apellido' => 'Proveedor',
             'email'    => 'edwinproveedor@gmail.com',
-            'password' => 'proveedor', // se hashea por el cast
+            'password' => 'proveedor', // asumiendo mutator que hashea
         ]);
 
         Usuario::factory()->viajero()->create([
@@ -42,11 +42,13 @@ class DatabaseSeeder extends Seeder
             'nombre'       => 'Hotel Cayetano',
             'tipo'         => 'hotel',
             'ciudad'       => 'Lima',
+            'pais'         => 'Perú', // <-- añadido por nuevo esquema
             'descripcion'  => 'Un hotel de prueba para el seeder.',
         ]);
 
         $hotel = Hotel::factory()->create([
             'servicio_id' => $servicioHotel->id,
+            // HotelFactory ya pone direccion y estrellas
         ]);
 
         $habitaciones = Habitacion::factory()->count(5)->create([
@@ -59,11 +61,10 @@ class DatabaseSeeder extends Seeder
             ]);
         });
 
-        // --- Servicios adicionales ---
+        // --- Servicios adicionales (mezcla hotel/tour aleatoria) ---
         Servicio::factory()->count(10)->create();
 
-        // --- Tours ---
-        // 1) Crear un tour con 3 salidas y 4 actividades secuenciales
+        // --- Tours (no tocar, lo de tours queda igual) ---
         $tour = Tour::factory()->create();
 
         TourSalida::factory()->count(3)->create([
@@ -76,7 +77,6 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // 2) Crear reservas sobre salidas existentes
         TourSalida::factory()->count(2)->create()->each(function ($salida) {
             ReservaTour::factory()->count(3)->create([
                 'salida_id' => $salida->id,

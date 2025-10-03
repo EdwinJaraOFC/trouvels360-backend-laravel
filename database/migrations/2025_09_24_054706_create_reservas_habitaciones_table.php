@@ -17,32 +17,44 @@ return new class extends Migration {
                 ->constrained('usuarios')
                 ->cascadeOnDelete();
 
-            // Qué habitación (tipo) reserva
+            // Qué habitación reserva
             $table->foreignId('habitacion_id')
                 ->constrained('habitaciones')
                 ->cascadeOnDelete();
 
-            // Rango de estadía (fechas)
+            // Rango de estadía
             $table->date('fecha_inicio');
             $table->date('fecha_fin');
 
-            // Cuántas unidades de esa habitación (ej. 2 habitaciones Dobles)
+            // Cuántas unidades de esa habitación
             $table->unsignedSmallInteger('cantidad')->default(1);
 
-            // Estados que bloquean disponibilidad: pendiente/confirmada
+            // Estados
             $table->enum('estado', ['pendiente', 'confirmada', 'cancelada'])
-                ->default('pendiente');
+                  ->default('pendiente');
 
-            // Snapshot de precio y total para auditoría
+            // Snapshot de precio y total
             $table->decimal('precio_por_noche', 10, 2);
             $table->decimal('total', 12, 2);
 
             $table->timestamps();
 
-            // Índices para disponibilidad y consultas rápidas
+            // Índices
             $table->index(['habitacion_id', 'fecha_inicio', 'fecha_fin']);
             $table->index(['usuario_id', 'estado']);
+            $table->index(['estado', 'fecha_inicio', 'fecha_fin']);
+
+            // (Opcional) Evitar reservas duplicadas exactas del mismo usuario
+            // $table->unique(['usuario_id','habitacion_id','fecha_inicio','fecha_fin']);
         });
+
+        // (Opcional) CHECKs si tu MySQL los aplica
+        // Schema::table('reservas_habitaciones', function (Blueprint $table) {
+        //     $table->check('fecha_fin > fecha_inicio');
+        //     $table->check('cantidad > 0');
+        //     $table->check('precio_por_noche >= 0');
+        //     $table->check('total >= 0');
+        // });
     }
 
     public function down(): void

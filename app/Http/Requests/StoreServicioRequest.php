@@ -40,6 +40,7 @@ class StoreServicioRequest extends FormRequest
             'tipo'         => ['required', Rule::in(['hotel','tour'])],
             'descripcion'  => ['sometimes','nullable','string'],
             'ciudad'       => ['required','string','max:100'],
+            'pais'         => ['required','string','max:100'], // <-- nuevo
             'imagen_url'   => ['sometimes','nullable','url','max:500'],
             'activo'       => ['sometimes','boolean'],
         ];

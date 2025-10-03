@@ -5,59 +5,104 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * Resource para exponer un Hotel con datos del Servicio y (opcionalmente) disponibilidad.
+ * - Toma nombre/ciudad/pais desde $hotel->servicio
+ * - Si se pasan $desde/$hasta, incluye bloque de disponibilidad + habitaciones filtradas
+ */
 class HotelResource extends JsonResource
 {
-    protected $checkIn;
-    protected $checkOut;
-    protected $filtros;
-    protected $habitacionesDisponibles;
+    /**
+     * Fechas de disponibilidad (opcionales). Si no se pasan, se devuelven todas las habitaciones.
+     */
+    protected ?string $desde;
+    protected ?string $hasta;
 
     /**
-     * Create a new resource instance with optional availability data.
-     *
-     * @param  mixed  $resource
-     * @param  string|null  $checkIn
-     * @param  string|null  $checkOut
-     * @param  array  $filtros
-     * @param  array  $habitacionesDisponibles
-     * @return void
+     * Filtros usados para calcular disponibilidad (adultos, niños, habitaciones).
      */
-    public function __construct($resource, $checkIn = null, $checkOut = null, $filtros = [], $habitacionesDisponibles = [])
+    protected array $filtros;
+
+    /**
+     * Habitaciones resultantes del cálculo de disponibilidad.
+     * Si está vacío, se usarán las habitaciones cargadas en la relación (si existen).
+     */
+    protected array $habitacionesDisponibles;
+
+    /**
+     * @param  mixed        $resource    Modelo Hotel (con relaciones)
+     * @param  string|null  $desde       Fecha inicio (YYYY-MM-DD)
+     * @param  string|null  $hasta       Fecha fin (YYYY-MM-DD)
+     * @param  array        $filtros     Filtros de búsqueda (adultos, niños, habitaciones)
+     * @param  array        $habitacionesDisponibles  Habitaciones ya filtradas/cálculo disponibilidad
+     */
+    public function __construct($resource, ?string $desde = null, ?string $hasta = null, array $filtros = [], array $habitacionesDisponibles = [])
     {
         parent::__construct($resource);
-        $this->checkIn = $checkIn;
-        $this->checkOut = $checkOut;
+        $this->desde = $desde;
+        $this->hasta = $hasta;
         $this->filtros = $filtros;
         $this->habitacionesDisponibles = $habitacionesDisponibles;
     }
 
     /**
-     * Transforma el recurso en una matriz.
-     *
-     * @return array<string, mixed>
+     * Transforma el recurso en un arreglo JSON listo para la API.
      */
     public function toArray(Request $request): array
     {
-        // Obtener el precio mínimo de las habitaciones del hotel
-        $precioMinimo = $this->habitaciones->min('precio_por_noche');
-        
+        // Relación servicio: en nuestros controladores viene eager-loaded con ->with('servicio')
+        // Aún así, accedemos directo (sin whenLoaded) para evitar MissingValue.
+        $servicio = $this->servicio;
+
+        // Precio mínimo entre habitaciones si están cargadas
+        $precioMinimo = $this->relationLoaded('habitaciones')
+            ? optional($this->habitaciones)->min('precio_por_noche')
+            : null;
+
+        // Normalizamos imagenUrl como array (aunque sea una sola imagen)
+        $imagenes = [];
+        if (!empty($servicio?->imagen_url)) {
+            $imagenes[] = $servicio->imagen_url;
+        }
+
         $data = [
-            'id' => $this->servicio_id,
-            'tipo' => $this->servicio->tipo,
-            'nombre' => $this->nombre,
-            'direccion' => $this->direccion,
-            'estrellas' => $this->estrellas,
-            'precio_por_noche' => $precioMinimo ? (float) $precioMinimo : null,
-            'imagenUrl' => $this->servicio->imagen_url,
-            'descripcion' => $this->servicio->descripcion,
+            'id'                => $this->servicio_id,                    // PK de hotel = id del servicio
+            'tipo'              => $servicio?->tipo ?? 'hotel',
+            'nombre'            => $servicio?->nombre,                    // nombre comercial desde servicios
+            'ciudad'            => $servicio?->ciudad,
+            'pais'              => $servicio?->pais,
+            'direccion'         => $this->direccion,
+            'estrellas'         => $this->estrellas,
+            'precio_por_noche'  => $precioMinimo !== null ? (float) $precioMinimo : null,
+            'imagenUrl'         => $imagenes,
+            'descripcion'       => $servicio?->descripcion,
         ];
 
-        // Si tenemos información de disponibilidad, la agregamos
-        if ($this->checkIn && $this->checkOut) {
-            $data['check_in'] = $this->checkIn;
-            $data['check_out'] = $this->checkOut;
-            $data['filtros'] = $this->filtros;
+        // Si tenemos información de disponibilidad (desde/hasta), agregamos bloque y la lista prefiltrada
+        if ($this->desde && $this->hasta) {
+            $data['disponibilidad'] = [
+                'desde' => $this->desde,
+                'hasta' => $this->hasta,
+            ];
+            $data['filtros'] = $this->filtros ?: null;
             $data['habitaciones'] = $this->habitacionesDisponibles;
+            return $data;
+        }
+
+        // Si NO hay disponibilidad calculada, devolvemos las habitaciones cargadas (si existen)
+        if ($this->relationLoaded('habitaciones')) {
+            $data['habitaciones'] = $this->habitaciones->map(function ($h) {
+                return [
+                    'id'                   => $h->id,
+                    'nombre'               => $h->nombre,
+                    'capacidad_adultos'    => (int) $h->capacidad_adultos,
+                    'capacidad_ninos'      => (int) $h->capacidad_ninos,
+                    'precio_por_noche'     => (float) $h->precio_por_noche,
+                    'unidades_totales'     => (int) $h->cantidad,
+                    'unidades_disponibles' => (int) $h->cantidad, // sin cálculo = igual al stock
+                    'descripcion'          => $h->descripcion,
+                ];
+            })->values();
         }
 
         return $data;

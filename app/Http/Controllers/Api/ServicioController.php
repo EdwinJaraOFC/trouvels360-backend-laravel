@@ -15,11 +15,12 @@ class ServicioController extends Controller
     public function index(Request $request): JsonResponse
     {
         $q = Servicio::query()
-            ->select('id','proveedor_id','nombre','tipo','ciudad','descripcion','imagen_url','activo','created_at');
+            ->select('id','proveedor_id','nombre','tipo','ciudad','pais','descripcion','imagen_url','activo','created_at');
 
         // Filtros básicos
         if ($request->filled('tipo'))   $q->where('tipo', $request->query('tipo'));      // 'hotel' | 'tour'
         if ($request->filled('ciudad')) $q->where('ciudad', $request->query('ciudad'));
+        if ($request->filled('pais'))   $q->where('pais', $request->query('pais'));
         if ($request->filled('activo')) $q->where('activo', filter_var($request->query('activo'), FILTER_VALIDATE_BOOLEAN));
 
         if ($request->filled('q')) {
@@ -50,7 +51,7 @@ class ServicioController extends Controller
 
         return response()->json([
             'message' => 'Servicio creado exitosamente.',
-            'data'    => $servicio->only('id','proveedor_id','nombre','tipo','ciudad','activo','created_at'),
+            'data'    => $servicio->only('id','proveedor_id','nombre','tipo','ciudad','pais','activo','created_at'),
         ], 201);
     }
 
@@ -58,7 +59,7 @@ class ServicioController extends Controller
     public function show(Servicio $servicio): JsonResponse
     {
         return response()->json(
-            $servicio->only('id','proveedor_id','nombre','tipo','ciudad','descripcion','imagen_url','activo','created_at','updated_at'),
+            $servicio->only('id','proveedor_id','nombre','tipo','ciudad','pais','descripcion','imagen_url','activo','created_at','updated_at'),
             200
         );
     }
@@ -66,7 +67,7 @@ class ServicioController extends Controller
     // PUT/PATCH /api/servicios/{servicio}
     public function update(UpdateServicioRequest $request, Servicio $servicio): JsonResponse
     {
-        // (opcional) impedir cambiar 'tipo' tras crear
+        // impedir cambiar 'tipo' tras crear (opcional)
         if ($request->filled('tipo') && $request->input('tipo') !== $servicio->tipo) {
             return response()->json(['message' => 'No se permite cambiar el tipo del servicio.'], 422);
         }
@@ -76,14 +77,14 @@ class ServicioController extends Controller
 
         return response()->json([
             'message' => 'Servicio modificado exitosamente.',
-            'data'    => $servicio->only('id','proveedor_id','nombre','tipo','ciudad','activo','updated_at'),
+            'data'    => $servicio->only('id','proveedor_id','nombre','tipo','ciudad','pais','activo','updated_at'),
         ], 200);
     }
 
     // DELETE /api/servicios/{servicio}
     public function destroy(Servicio $servicio): JsonResponse
     {
-        $servicio->delete(); // FKs harán el resto cuando agreguemos tablas hijas
+        $servicio->delete();
         return response()->json(null, 204);
     }
 }

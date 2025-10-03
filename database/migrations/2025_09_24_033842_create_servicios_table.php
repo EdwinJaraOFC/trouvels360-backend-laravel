@@ -10,23 +10,27 @@ return new class extends Migration {
         Schema::create('servicios', function (Blueprint $table) {
             $table->id();
 
-            // Relación con el proveedor (usuarios.id)
             $table->foreignId('proveedor_id')
                 ->constrained('usuarios')
                 ->cascadeOnDelete();
 
             $table->string('nombre', 150);
-            $table->enum('tipo', ['hotel', 'tour']);     // especialización
+            $table->enum('tipo', ['hotel', 'tour']);
             $table->text('descripcion')->nullable();
+
+            // Localización común
             $table->string('ciudad', 100);
+            $table->string('pais', 100);
+
+            // Imagen principal opcional
             $table->string('imagen_url', 500)->nullable();
 
-            // Permite ocultar/pausar un servicio sin borrarlo
             $table->boolean('activo')->default(true);
 
             $table->timestamps();
 
-            // Índices para búsqueda
+            // Índices
+            $table->index(['pais', 'ciudad']);
             $table->index(['ciudad', 'tipo']);
             $table->index(['activo', 'tipo']);
         });

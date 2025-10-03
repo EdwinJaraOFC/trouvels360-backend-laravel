@@ -36,6 +36,7 @@ class UpdateServicioRequest extends FormRequest
             'tipo'         => ['sometimes', Rule::in(['hotel','tour'])],
             'descripcion'  => ['sometimes','nullable','string'],
             'ciudad'       => ['sometimes','string','max:100'],
+            'pais'         => ['sometimes','string','max:100'], // <-- nuevo
             'imagen_url'   => ['sometimes','nullable','url','max:500'],
             'activo'       => ['sometimes','boolean'],
         ];

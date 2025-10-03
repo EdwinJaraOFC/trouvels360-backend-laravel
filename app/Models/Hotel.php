@@ -7,31 +7,42 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Modelo para la tabla `hoteles`
+ * PK = FK (servicio_id)
  */
 class Hotel extends Model
 {
     use HasFactory;
 
     protected $table = 'hoteles';
-    protected $primaryKey = 'servicio_id'; // la PK es el servicio_id
-    public $incrementing = false;          // no es autoincremental
+    protected $primaryKey = 'servicio_id';
+    public $incrementing = false;
     protected $keyType = 'int';
 
     protected $fillable = [
         'servicio_id',
-        'nombre',
         'direccion',
-        'estrellas',
+        'estrellas',   // 1..5 (nullable)
+    ];
+
+    protected $casts = [
+        'estrellas' => 'int',
     ];
 
     // 🔗 Relaciones
     public function servicio()
     {
-        return $this->belongsTo(Servicio::class, 'servicio_id');
+        return $this->belongsTo(Servicio::class, 'servicio_id', 'id');
     }
 
     public function habitaciones()
     {
-        return $this->hasMany(Habitacion::class, 'servicio_id');
+        // Nota: en Habitacion, servicio_id apunta a hoteles.servicio_id
+        return $this->hasMany(Habitacion::class, 'servicio_id', 'servicio_id');
+    }
+
+    // (Opcional) Accesor para mostrar nombre del hotel desde servicio
+    public function getNombreAttribute()
+    {
+        return optional($this->servicio)->nombre;
     }
 }

@@ -50,14 +50,22 @@ class HotelResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        // Relación servicio: en nuestros controladores viene eager-loaded con ->with('servicio')
-        // Aún así, accedemos directo (sin whenLoaded) para evitar MissingValue.
+        // Relación servicio: se espera eager-loaded en el controller.
         $servicio = $this->servicio;
 
-        // Precio mínimo entre habitaciones si están cargadas
-        $precioMinimo = $this->relationLoaded('habitaciones')
-            ? optional($this->habitaciones)->min('precio_por_noche')
-            : null;
+        // Calcular precio mínimo:
+        // - Si tenemos habitacionesDisponibles (modo disponibilidad), usar ese array.
+        // - Si no, y la relación 'habitaciones' está cargada, usar la relación.
+        $precioMinimo = null;
+        if (!empty($this->habitacionesDisponibles)) {
+            // habitacionesDisponibles es un array simple; sacamos el min de 'precio_por_noche'
+            $precios = array_column($this->habitacionesDisponibles, 'precio_por_noche');
+            if (!empty($precios)) {
+                $precioMinimo = min($precios);
+            }
+        } elseif ($this->relationLoaded('habitaciones')) {
+            $precioMinimo = optional($this->habitaciones)->min('precio_por_noche');
+        }
 
         // Normalizamos imagenUrl como array (aunque sea una sola imagen)
         $imagenes = [];

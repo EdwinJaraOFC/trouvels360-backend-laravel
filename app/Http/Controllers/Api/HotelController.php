@@ -19,11 +19,111 @@ use Illuminate\Support\Facades\DB;
 class HotelController extends Controller
 {
     // GET /api/hoteles
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        // --- MODO DISPONIBILIDAD GLOBAL (con check_in + check_out) ---
+        if ($request->filled('check_in') && $request->filled('check_out')) {
+            $checkIn  = Carbon::parse($request->query('check_in'))->toDateString();
+            $checkOut = Carbon::parse($request->query('check_out'))->toDateString();
+
+            $adultos = $request->query('adultos'); // opcional
+            $ninos   = $request->query('ninos');   // opcional
+            $reqHab  = (int) ($request->query('habitaciones', 1));
+
+            // Filtros opcionales de destino (útiles para buscar por ciudad/pais)
+            $pais   = $request->query('pais');
+            $ciudad = $request->query('ciudad');
+
+            // 1) Traer hoteles activos con servicio (y habitaciones) aplicando filtros de destino
+            $hoteles = Hotel::with(['servicio:id,nombre,tipo,descripcion,ciudad,pais,imagen_url,activo', 'habitaciones'])
+                ->whereHas('servicio', function ($q) use ($pais, $ciudad) {
+                    $q->where('activo', true)
+                      ->when($pais,   fn($qq) => $qq->where('pais', $pais))
+                      ->when($ciudad, fn($qq) => $qq->where('ciudad', $ciudad));
+                })
+                ->get();
+
+            if ($hoteles->isEmpty()) {
+                return response()->json(['data' => []], 200);
+            }
+
+            // 2) Filtrar por capacidad a nivel de habitaciones si llegó adultos/ninos
+            //    y recolectar IDs de todas las habitaciones candidatas
+            $habitacionIds = [];
+            $hoteles->each(function ($hotel) use (&$habitacionIds, $adultos, $ninos) {
+                $cands = $hotel->habitaciones
+                    ->when($adultos !== null, fn($c) => $c->where('capacidad_adultos', '>=', (int)$adultos))
+                    ->when($ninos   !== null, fn($c) => $c->where('capacidad_ninos',   '>=', (int)$ninos));
+                $habitacionIds = array_merge($habitacionIds, $cands->pluck('id')->all());
+            });
+
+            if (empty($habitacionIds)) {
+                return response()->json(['data' => []], 200);
+            }
+
+            // 3) Cargar ocupación (reservas) para TODO el conjunto en el rango dado
+            // Regla de solape: (inicio < checkOut) AND (fin > checkIn)
+            $ocupacion = ReservaHabitacion::query()
+                ->selectRaw('habitacion_id, COALESCE(SUM(cantidad),0) as unidades_ocupadas')
+                ->whereIn('estado', ['pendiente','confirmada'])
+                ->whereDate('fecha_inicio', '<',  $checkOut)
+                ->whereDate('fecha_fin',    '>',  $checkIn)
+                ->whereIn('habitacion_id', $habitacionIds)
+                ->groupBy('habitacion_id')
+                ->pluck('unidades_ocupadas', 'habitacion_id'); // [habitacion_id => ocupadas]
+
+            // 4) Construir respuesta: por cada hotel, quedarse con las habitaciones que tengan cupo
+            $filtros = [
+                'adultos'      => $adultos !== null ? (int)$adultos : null,
+                'ninos'        => $ninos   !== null ? (int)$ninos   : null,
+                'habitaciones' => $reqHab,
+            ];
+
+            $items = [];
+            foreach ($hoteles as $hotel) {
+                // Candidatas (por capacidad)
+                $cands = $hotel->habitaciones
+                    ->when($adultos !== null, fn($c) => $c->where('capacidad_adultos', '>=', (int)$adultos))
+                    ->when($ninos   !== null, fn($c) => $c->where('capacidad_ninos',   '>=', (int)$ninos));
+
+                $habitacionesDisponibles = [];
+                foreach ($cands as $h) {
+                    $ocupadas     = (int) ($ocupacion[$h->id] ?? 0);
+                    $disponibles  = max(0, (int)$h->cantidad - $ocupadas);
+
+                    if ($disponibles >= $reqHab) {
+                        $habitacionesDisponibles[] = [
+                            'id'                   => $h->id,
+                            'nombre'               => $h->nombre,
+                            'capacidad_adultos'    => (int)$h->capacidad_adultos,
+                            'capacidad_ninos'      => (int)$h->capacidad_ninos,
+                            'precio_por_noche'     => (float)$h->precio_por_noche,
+                            'unidades_totales'     => (int)$h->cantidad,
+                            'unidades_disponibles' => $disponibles,
+                            'descripcion'          => $h->descripcion,
+                        ];
+                    }
+                }
+
+                // Solo incluir hoteles con al menos una habitación que cumpla
+                if (!empty($habitacionesDisponibles)) {
+                    $items[] = (new HotelResource(
+                        $hotel,
+                        $checkIn,
+                        $checkOut,
+                        $filtros,
+                        $habitacionesDisponibles
+                    ))->toArray($request);
+                }
+            }
+
+            return response()->json(['data' => $items], 200);
+        }
+
+        // --- MODO LISTA NORMAL (sin check_in/check_out) ---
         $hoteles = Hotel::with([
             'servicio:id,nombre,tipo,descripcion,ciudad,pais,imagen_url,activo',
-            'habitaciones:id,servicio_id,precio_por_noche'
+            'habitaciones:id,servicio_id,precio_por_noche,cantidad'
         ])->get();
 
         return HotelResource::collection($hoteles)->response();
@@ -103,7 +203,6 @@ class HotelController extends Controller
     }
 
     // DELETE /api/hoteles/{servicio_id}
-    // Usa UpdateHotelRequest para que corra authorize()
     public function destroy(UpdateHotelRequest $request, int $servicio_id): JsonResponse
     {
         $hotel = Hotel::find($servicio_id);
@@ -113,7 +212,7 @@ class HotelController extends Controller
         return response()->json(null, 204);
     }
 
-    // GET /api/hoteles/{servicio_id}/disponibilidad
+    // GET /api/hoteles/{servicio_id}/disponibilidad  (modo por un solo hotel, se mantiene)
     public function disponibilidad(DisponibilidadHotelRequest $request, int $servicio_id): JsonResponse
     {
         $hotel = Hotel::with([

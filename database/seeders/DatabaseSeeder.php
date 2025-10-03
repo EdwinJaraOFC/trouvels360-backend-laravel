@@ -11,6 +11,7 @@ use App\Models\Tour;
 use App\Models\TourSalida;
 use App\Models\TourActividad;
 use App\Models\ReservaTour;
+use App\Models\Review;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -155,5 +156,21 @@ class DatabaseSeeder extends Seeder
                 'salida_id' => $salida->id,
             ]);
         });
+
+        // -------Reviews-------------
+        $usuarioIds = Usuario::pluck('id'); 
+
+        Servicio::all()->each(function ($servicio) use ($usuarioIds) {
+            Review::factory()
+                ->count(3) // generar 3 reseñas por servicio
+                ->state(function () use ($servicio, $usuarioIds) {
+                    return [
+                        'servicio_id' => $servicio->id,
+                        'usuario_id'  => $usuarioIds->random(),
+                    ];
+                })
+                ->create();
+        });
+
     }
 }

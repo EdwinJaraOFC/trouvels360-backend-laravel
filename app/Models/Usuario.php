@@ -32,4 +32,10 @@ class Usuario extends Authenticatable
     {
         $this->attributes['email'] = mb_strtolower(trim($value));
     }
+    // Relación con reviews
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'usuario_id', 'id')
+                ->orderBy('created_at', 'desc');
+    }
 }

@@ -89,4 +89,11 @@ class Servicio extends Model
     {
         return $query->when($tipo, fn($q) => $q->where('tipo', $tipo));
     }
+
+    // Reviews
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'servicio_id', 'id')
+                ->orderBy('created_at', 'desc');
+    }
 }

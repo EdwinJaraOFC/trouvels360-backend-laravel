@@ -6,34 +6,33 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreHotelRequest extends FormRequest
 {
+    /**
+     * Solo proveedores autenticados pueden crear hoteles.
+     * El proveedor dueño se tomará del usuario autenticado (no del body).
+     */
     public function authorize(): bool
     {
-        $user = $this->user();
-        if (!$user || $user->rol !== 'proveedor') {
-            return false;
-        }
-
-        // Crear hotel ahora SIEMPRE crea también el servicio (tipo=hotel).
-        // Exigimos que el proveedor_id enviado sea el del usuario autenticado.
-        $serv = $this->input('servicio', []);
-        return isset($serv['proveedor_id']) && (int)$serv['proveedor_id'] === (int)$user->id;
+        return auth()->check() && auth()->user()->rol === 'proveedor';
     }
 
+    /**
+     * Ahora recibimos JSON plano (sin objeto "servicio").
+     * Validamos campos del Servicio + Hotel directamente.
+     */
     public function rules(): array
     {
         return [
-            // Datos del Servicio (tipo se fuerza a 'hotel' en el controller)
-            'servicio.proveedor_id' => ['required','integer','exists:usuarios,id'],
-            'servicio.nombre'       => ['required','string','max:150'],
-            'servicio.descripcion'  => ['sometimes','nullable','string'],
-            'servicio.ciudad'       => ['required','string','max:100'],
-            'servicio.pais'         => ['required','string','max:100'],
-            'servicio.imagen_url'   => ['sometimes','nullable','string','max:500'],
-            'servicio.activo'       => ['sometimes','boolean'],
+            // Campos del SERVICIO (tipo se fuerza a 'hotel' en el controller)
+            'nombre'      => ['required','string','max:150'],
+            'descripcion' => ['sometimes','nullable','string'],
+            'ciudad'      => ['required','string','max:100'],
+            'pais'        => ['required','string','max:100'],
+            'imagen_url'  => ['sometimes','nullable','string','max:500'],
+            'activo'      => ['sometimes','boolean'],
 
-            // Datos del Hotel
-            'direccion'             => ['required','string','max:255'],
-            'estrellas'             => ['nullable','integer','between:1,5'],
+            // Campos del HOTEL (detalle)
+            'direccion'   => ['required','string','max:255'],
+            'estrellas'   => ['sometimes','nullable','integer','between:1,5'],
         ];
     }
 }

@@ -47,8 +47,7 @@ class HotelController extends Controller
                 return response()->json(['data' => []], 200);
             }
 
-            // 2) Filtrar por capacidad a nivel de habitaciones si llegó adultos/ninos
-            //    y recolectar IDs de todas las habitaciones candidatas
+            // 2) Filtrar por capacidad y recolectar IDs de habitaciones candidatas
             $habitacionIds = [];
             $hoteles->each(function ($hotel) use (&$habitacionIds, $adultos, $ninos) {
                 $cands = $hotel->habitaciones
@@ -62,7 +61,6 @@ class HotelController extends Controller
             }
 
             // 3) Cargar ocupación (reservas) para TODO el conjunto en el rango dado
-            // Regla de solape: (inicio < checkOut) AND (fin > checkIn)
             $ocupacion = ReservaHabitacion::query()
                 ->selectRaw('habitacion_id, COALESCE(SUM(cantidad),0) as unidades_ocupadas')
                 ->whereIn('estado', ['pendiente','confirmada'])
@@ -70,9 +68,9 @@ class HotelController extends Controller
                 ->whereDate('fecha_fin',    '>',  $checkIn)
                 ->whereIn('habitacion_id', $habitacionIds)
                 ->groupBy('habitacion_id')
-                ->pluck('unidades_ocupadas', 'habitacion_id'); // [habitacion_id => ocupadas]
+                ->pluck('unidades_ocupadas', 'habitacion_id');
 
-            // 4) Construir respuesta: por cada hotel, quedarse con las habitaciones que tengan cupo
+            // 4) Construir respuesta por hotel
             $filtros = [
                 'adultos'      => $adultos !== null ? (int)$adultos : null,
                 'ninos'        => $ninos   !== null ? (int)$ninos   : null,
@@ -81,7 +79,6 @@ class HotelController extends Controller
 
             $items = [];
             foreach ($hoteles as $hotel) {
-                // Candidatas (por capacidad)
                 $cands = $hotel->habitaciones
                     ->when($adultos !== null, fn($c) => $c->where('capacidad_adultos', '>=', (int)$adultos))
                     ->when($ninos   !== null, fn($c) => $c->where('capacidad_ninos',   '>=', (int)$ninos));
@@ -105,7 +102,6 @@ class HotelController extends Controller
                     }
                 }
 
-                // Solo incluir hoteles con al menos una habitación que cumpla
                 if (!empty($habitacionesDisponibles)) {
                     $items[] = (new HotelResource(
                         $hotel,
@@ -129,23 +125,30 @@ class HotelController extends Controller
         return HotelResource::collection($hoteles)->response();
     }
 
-    // POST /api/hoteles  (crea Servicio(tipo=hotel) + Hotel en una transacción)
+    /**
+     * POST /api/hoteles
+     * Crea Servicio(tipo=hotel) + Hotel en una transacción.
+     * 🔹 Ahora acepta JSON plano (sin objeto "servicio").
+     */
     public function store(StoreHotelRequest $request): JsonResponse
     {
+        $user = $request->user();
         $data = $request->validated();
 
-        $hotel = DB::transaction(function () use ($data) {
+        $hotel = DB::transaction(function () use ($data, $user) {
+            // 1) Crear SERVICIO (nombre/ciudad/pais/… vienen directos del body)
             $servicio = Servicio::create([
-                'proveedor_id' => $data['servicio']['proveedor_id'],
-                'nombre'       => $data['servicio']['nombre'],
-                'tipo'         => 'hotel', // se fuerza aquí
-                'descripcion'  => $data['servicio']['descripcion'] ?? null,
-                'ciudad'       => $data['servicio']['ciudad'],
-                'pais'         => $data['servicio']['pais'],
-                'imagen_url'   => $data['servicio']['imagen_url'] ?? null,
-                'activo'       => $data['servicio']['activo'] ?? true,
+                'proveedor_id' => $user->id,                 // dueño = usuario autenticado
+                'nombre'       => $data['nombre'],
+                'tipo'         => 'hotel',                   // se fuerza aquí
+                'descripcion'  => $data['descripcion'] ?? null,
+                'ciudad'       => $data['ciudad'],
+                'pais'         => $data['pais'],
+                'imagen_url'   => $data['imagen_url'] ?? null,
+                'activo'       => $data['activo'] ?? true,
             ]);
 
+            // 2) Crear HOTEL (detalle)
             return Hotel::create([
                 'servicio_id' => $servicio->id,
                 'direccion'   => $data['direccion'],
@@ -190,15 +193,37 @@ class HotelController extends Controller
     // PUT /api/hoteles/{servicio_id}
     public function update(UpdateHotelRequest $request, int $servicio_id): JsonResponse
     {
-        $hotel = Hotel::find($servicio_id);
-        if (!$hotel) return response()->json(['message' => 'Hotel no encontrado'], 404);
+        $hotel = Hotel::with('servicio')->find($servicio_id);
+        if (!$hotel) {
+            return response()->json(['message' => 'Hotel no encontrado'], 404);
+        }
 
-        $hotel->update($request->validated());
-        $hotel->refresh();
+        $data = $request->validated();
+
+        DB::transaction(function () use ($hotel, $data) {
+            // Actualizar HOTEL (solo si hay datos de hotel)
+            $hotelData = array_intersect_key($data, array_flip(['direccion', 'estrellas']));
+            if (!empty($hotelData)) {
+                $hotel->update($hotelData);
+            }
+
+            // Actualizar SERVICIO relacionado (nombre, descripción, etc.)
+            $servicioData = array_intersect_key($data, array_flip([
+                'nombre', 'descripcion', 'ciudad', 'pais', 'imagen_url', 'activo'
+            ]));
+            if (!empty($servicioData)) {
+                $hotel->servicio->update($servicioData);
+            }
+        });
+
+        $hotel->refresh()->load('servicio');
 
         return response()->json([
             'message' => 'Hotel actualizado correctamente.',
-            'data'    => $hotel,
+            'data'    => [
+                'hotel' => $hotel,
+                'servicio' => $hotel->servicio,
+            ],
         ], 200);
     }
 
@@ -212,7 +237,7 @@ class HotelController extends Controller
         return response()->json(null, 204);
     }
 
-    // GET /api/hoteles/{servicio_id}/disponibilidad  (modo por un solo hotel, se mantiene)
+    // GET /api/hoteles/{servicio_id}/disponibilidad  (modo por un solo hotel)
     public function disponibilidad(DisponibilidadHotelRequest $request, int $servicio_id): JsonResponse
     {
         $hotel = Hotel::with([

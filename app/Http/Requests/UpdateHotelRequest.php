@@ -14,7 +14,6 @@ class UpdateHotelRequest extends FormRequest
             return false;
         }
 
-        // servicio_id viene en la ruta como {servicio_id}
         $servicioId = (int) $this->route('servicio_id');
         $servicio = Servicio::find($servicioId);
 
@@ -26,9 +25,17 @@ class UpdateHotelRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // 'nombre' ya no existe en hoteles
-            'direccion' => ['sometimes','string','max:255'],
-            'estrellas' => ['sometimes','nullable','integer','between:1,5'],
+            // Campos del SERVICIO
+            'nombre'      => ['sometimes', 'string', 'max:150'],
+            'descripcion' => ['sometimes', 'nullable', 'string'],
+            'ciudad'      => ['sometimes', 'string', 'max:100'],
+            'pais'        => ['sometimes', 'string', 'max:100'],
+            'imagen_url'  => ['sometimes', 'nullable', 'string', 'max:500'],
+            'activo'      => ['sometimes', 'boolean'],
+
+            // Campos del HOTEL
+            'direccion'   => ['sometimes', 'string', 'max:255'],
+            'estrellas'   => ['sometimes', 'nullable', 'integer', 'between:1,5'],
         ];
     }
 }

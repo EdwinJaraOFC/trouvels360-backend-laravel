@@ -22,7 +22,8 @@ class ReservaHabitacionFactory extends Factory
         $cantidad = $this->faker->numberBetween(1, 3);
 
         return [
-            'codigo_reserva'   => strtoupper($this->faker->bothify('RES-####')),
+            //'codigo_reserva'   => strtoupper($this->faker->bothify('RES-####')),
+            'codigo_reserva' => 'RES-' . str_pad($this->faker->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
             // Si tienes un factory state 'viajero' en Usuario, úsalo; si no, deja ->state(['rol'=>'viajero'])
             'usuario_id'       => Usuario::factory()->state(['rol' => 'viajero']),
             'habitacion_id'    => Habitacion::factory(),

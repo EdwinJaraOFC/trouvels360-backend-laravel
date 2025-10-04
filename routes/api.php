@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\TourController;
 use App\Http\Controllers\Api\TourSalidaController;
 use App\Http\Controllers\Api\TourActividadController;
 use App\Http\Controllers\Api\ReservaTourController;
+use App\Http\Controllers\Api\ReviewController;
 
 // Healthcheck
 Route::get('ping', fn () => response()->json(['pong' => true]));
@@ -100,4 +101,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // No colisiona con {tour} gracias a whereNumber en las anteriores
     Route::get('tours/mis-reservas', [ReservaTourController::class, 'misReservas']);
+});
+
+// -----RESEÑAS (Reviews)------
+// Público
+Route::get('reviews', [ReviewController::class, 'index']);
+
+//Protegido
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('reviews', [ReviewController::class, 'store']);
+    Route::put('reviews/{review}', [ReviewController::class, 'update']);
+    Route::patch('reviews/{review}', [ReviewController::class, 'update']);
+    Route::delete('reviews/{review}', [ReviewController::class, 'destroy']);
 });

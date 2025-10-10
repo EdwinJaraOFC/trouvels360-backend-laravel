@@ -3,63 +3,89 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreUsuarioRequest;
 use App\Http\Requests\UpdateUsuarioRequest;
 use App\Models\Usuario;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class UsuarioController extends Controller
 {
-    // GET /api/usuarios
+    // GET /api/usuarios  (público)
     public function index(): JsonResponse
     {
-        $usuarios = Usuario::select('id','nombre','apellido','email','rol','created_at')->get();
+        $usuarios = Usuario::select(
+            'id',
+            'nombre',
+            'apellido',
+            'empresa_nombre',
+            'telefono',
+            'ruc',
+            'email',
+            'rol',
+            'created_at'
+        )->get();
+
         return response()->json($usuarios, 200);
     }
 
-    // POST /api/usuarios
-    public function store(StoreUsuarioRequest $request): JsonResponse
-    {
-        $usuario = Usuario::create($request->validated());
-
-        return response()->json([
-            'message' => 'Usuario creado correctamente.',
-            'data'    => $usuario->only('id','nombre','apellido','email','rol','created_at'),
-        ], 201);
-    }
-
-    // GET /api/usuarios/{usuario}
+    // GET /api/usuarios/{usuario}  (público)
     public function show(Usuario $usuario): JsonResponse
     {
         return response()->json(
-            $usuario->only('id','nombre','apellido','email','rol','created_at','updated_at'),
+            $usuario->only(
+                'id',
+                'nombre',
+                'apellido',
+                'empresa_nombre',
+                'telefono',
+                'ruc',
+                'email',
+                'rol',
+                'created_at',
+                'updated_at'
+            ),
             200
         );
     }
 
-    // PUT/PATCH /api/usuarios/{usuario}
-    public function update(UpdateUsuarioRequest $request, Usuario $usuario): JsonResponse
+    // PATCH/PUT /api/usuarios/me  (protegido)
+    public function updateMe(UpdateUsuarioRequest $request): JsonResponse
     {
-        // opcional: evita actualizar sin cambios
-        if (empty($request->validated())) {
-            return response()->json([
-                'message' => 'No se recibieron campos para actualizar.'
-            ], 422);
+        $usuario = $request->user();
+        $data = $request->validated();
+
+        if (empty($data)) {
+            return response()->json(['message' => 'No se recibieron campos para actualizar.'], 422);
         }
 
-        $usuario->update($request->validated());
-        $usuario->refresh(); // <- asegura updated_at y datos frescos
+        // Defensa extra: nunca permitir cambiar rol desde aquí
+        unset($data['rol']);
+
+        $usuario->update($data);
+        $usuario->refresh();
 
         return response()->json([
             'message' => 'Usuario actualizado correctamente.',
-            'data'    => $usuario->only('id','nombre','apellido','email','rol','updated_at'),
+            'data'    => $usuario->only(
+                'id',
+                'nombre',
+                'apellido',
+                'empresa_nombre',
+                'telefono',
+                'ruc',
+                'email',
+                'rol',
+                'updated_at'
+            ),
         ], 200);
     }
 
-    // DELETE /api/usuarios/{usuario}  (hard delete)
-    public function destroy(Usuario $usuario): JsonResponse
+    // DELETE /api/usuarios/me  (protegido)
+    public function destroyMe(Request $request): JsonResponse
     {
+        $usuario = $request->user();
         $usuario->delete();
-        return response()->json(null, 204);
+
+        return response()->json(['message' => 'Cuenta eliminada exitosamente.'], 200);
     }
 }

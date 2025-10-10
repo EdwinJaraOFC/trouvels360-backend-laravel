@@ -15,14 +15,28 @@ use App\Http\Controllers\Api\ReservaTourController;
 // Healthcheck
 Route::get('ping', fn () => response()->json(['pong' => true]));
 
-// ---------- Usuarios (público por ahora) ----------
-Route::apiResource('usuarios', UsuarioController::class);
+// ---------- Usuarios ----------
+
+// Público: solo listar y ver detalle
+Route::apiResource('usuarios', UsuarioController::class)->only(['index','show']);
+
+// Protegido: actualizar o eliminar la propia cuenta
+Route::middleware('auth:sanctum')->group(function () {
+    // Actualizar usuario autenticado
+    Route::patch('usuarios/me', [UsuarioController::class, 'updateMe']);
+    Route::put('usuarios/me',   [UsuarioController::class, 'updateMe']);
+
+    // Eliminar su propia cuenta
+    Route::delete('usuarios/me', [UsuarioController::class, 'destroyMe']);
+});
 
 // ---------- Auth ----------
-Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
+Route::post('auth/login',    [AuthController::class, 'login'])->middleware('throttle:6,1');
+Route::post('auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('auth/me', [AuthController::class, 'me']);
-    Route::post('auth/logout', [AuthController::class, 'logout']);
+    Route::get('auth/me',     [AuthController::class, 'me']);
+    Route::post('auth/logout',[AuthController::class, 'logout']);
 });
 
 // ---------- Servicios ----------

@@ -19,22 +19,31 @@ class DatabaseSeeder extends Seeder
     {
         // --- Usuarios fijos ---
         $proveedor = Usuario::factory()->proveedor()->create([
-            'nombre'   => 'Edwin',
-            'apellido' => 'Proveedor',
-            'email'    => 'edwinproveedor@gmail.com',
-            'password' => 'proveedor', // asumiendo mutator que hashea
+            // Para PROVEEDOR: nombre/apellido en null; usa empresa + teléfono + RUC
+            'nombre'          => null,
+            'apellido'        => null,
+            'empresa_nombre'  => 'Edwin Proveedor SAC',
+            'telefono'        => '+51 9' . fake()->numerify('########'), // +51 9########
+            'ruc'             => (string) fake()->numerify('2##########'), // 11 dígitos
+            'email'           => 'edwinproveedor@gmail.com',
+            'password'        => 'proveedor', // se hashea por el cast del modelo
         ]);
 
         Usuario::factory()->viajero()->create([
-            'nombre'   => 'Edwin',
-            'apellido' => 'Viajero',
-            'email'    => 'edwinviajero@gmail.com',
-            'password' => 'viajero',
+            // Para VIAJERO: empresa/teléfono/RUC en null; usa nombre/apellido
+            'nombre'          => 'Edwin',
+            'apellido'        => 'Viajero',
+            'empresa_nombre'  => null,
+            'telefono'        => null,
+            'ruc'             => null,
+            'email'           => 'edwinviajero@gmail.com',
+            'password'        => 'viajero',
         ]);
 
-        // Lotes adicionales de usuarios
+        // Lotes adicionales de usuarios (las factories ya generan los campos correctos)
         Usuario::factory()->viajero()->count(5)->create();
         Usuario::factory()->proveedor()->count(5)->create();
+
 
         // ---------------------------------------------------------
         // HOTELS PACK: 3 hoteles con varios tipos de habitaciones

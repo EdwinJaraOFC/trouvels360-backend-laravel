@@ -22,6 +22,7 @@ class TourSalida extends Model
 
     protected $casts = [
         'fecha'         => 'date',
+        'hora'          => 'datetime:H:i',
         'cupo_total'    => 'integer',
         'cupo_reservado'=> 'integer',
     ];

@@ -24,10 +24,16 @@ class UpdateTourRequest extends FormRequest
             'activo'      => ['sometimes','boolean'],
 
             // Campos del TOUR (opcionales)
-            'categoria'            => ['sometimes','nullable','in:Gastronomía,Aventura,Cultura,Relajación'],
-            'duracion_min'         => ['sometimes','nullable','integer','min:0'],
-            'precio_persona'       => ['sometimes','numeric','min:0'],
-            'capacidad_por_salida' => ['sometimes','nullable','integer','min:1'],
+            'categoria'     => ['sometimes','nullable','in:Gastronomía,Aventura,Cultura,Relajación'],
+            'duracion'      => ['sometimes','nullable','integer','min:0'],
+            'precio'        => ['sometimes','numeric','min:0'],
+            'cupos'         => ['sometimes','nullable','integer','min:1'],
+
+            // Campos adicionales
+            'cosas_que_llevar'   => ['sometimes', 'array'],
+            'cosas_que_llevar.*' => ['string'],
+            'galeria_imagenes'   => ['sometimes', 'array'],
+            'galeria_imagenes.*' => ['url'],
         ];
     }
 }

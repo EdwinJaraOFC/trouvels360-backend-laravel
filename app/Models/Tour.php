@@ -17,15 +17,19 @@ class Tour extends Model
     protected $fillable = [
         'servicio_id',
         'categoria',
-        'duracion_min',
-        'precio_persona',
-        'capacidad_por_salida',
+        'fecha',
+        'duracion',
+        'precio',
+        'cupos',
+        'cosas_para_llevar',
     ];
 
     protected $casts = [
-        'duracion_min'         => 'integer',
-        'precio_persona'       => 'decimal:2',
-        'capacidad_por_salida' => 'integer',
+        'duracion'  => 'integer',
+        'precio'    => 'decimal:2',
+        'cupos'     => 'integer',
+        'galeria_imagenes' => 'array',
+        'cosas_para_llevar' => 'array',
     ];
 
     // 👇 clave para que {tour} use servicio_id en rutas

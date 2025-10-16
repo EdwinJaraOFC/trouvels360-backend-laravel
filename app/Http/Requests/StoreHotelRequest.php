@@ -22,17 +22,23 @@ class StoreHotelRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Campos del SERVICIO (tipo se fuerza a 'hotel' en el controller)
+            // SERVICIO
             'nombre'      => ['required','string','max:150'],
             'descripcion' => ['sometimes','nullable','string'],
             'ciudad'      => ['required','string','max:100'],
             'pais'        => ['required','string','max:100'],
-            'imagen_url'  => ['sometimes','nullable','string','max:500'],
+            'imagen_url'  => ['sometimes','nullable','url','max:500'], // 👈 usa 'url'
             'activo'      => ['sometimes','boolean'],
 
-            // Campos del HOTEL (detalle)
+            // HOTEL
             'direccion'   => ['required','string','max:255'],
             'estrellas'   => ['sometimes','nullable','integer','between:1,5'],
+
+            // Galería (servicio_imagenes)
+            'imagenes'       => ['sometimes','array','max:5'],
+            'imagenes.*'     => ['nullable'],
+            'imagenes.*.url' => ['sometimes','required','url','max:500'],
+            'imagenes.*.alt' => ['sometimes','nullable','string','max:150'],
         ];
     }
 }

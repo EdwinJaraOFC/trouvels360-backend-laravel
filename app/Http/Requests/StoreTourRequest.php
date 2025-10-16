@@ -8,32 +8,34 @@ class StoreTourRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Solo proveedores pueden crear tours
         return auth()->check() && auth()->user()->rol === 'proveedor';
     }
 
     public function rules(): array
     {
         return [
-            // Campos del Servicio
-            'nombre'       => ['required', 'string', 'max:150'],
-            'descripcion'  => ['nullable', 'string'],
-            'ciudad'       => ['required', 'string', 'max:100'],
-            'pais'         => ['required', 'string', 'max:100'],
-            'imagen_url'   => ['nullable', 'url'],
-            'activo'       => ['boolean'],
+            // Servicio
+            'nombre'      => ['required', 'string', 'max:150'],
+            'descripcion' => ['nullable', 'string'],
+            'ciudad'      => ['required', 'string', 'max:100'],
+            'pais'        => ['required', 'string', 'max:100'],
+            'imagen_url'  => ['nullable', 'url', 'max:500'],
+            'activo'      => ['boolean'],
 
-            // Campos del TOUR (detalle)
-            'categoria'            => ['nullable','in:Gastronomía,Aventura,Cultura,Relajación'],
-            'duracion'         => ['nullable','integer','min:0'],       // 0..1440 si quieres acotar
-            'precio'       => ['required','numeric','min:0'],
-            'cupos' => ['nullable','integer','min:1'],
+            // Tour
+            'categoria'           => ['nullable','in:Gastronomía,Aventura,Cultura,Relajación'],
+            'duracion'            => ['nullable','integer','min:0'],
+            'precio'              => ['required','numeric','min:0'],
+            'cupos'               => ['nullable','integer','min:1'],
+            'fecha'               => ['required','date'], // requerido por la migración actual
+            'cosas_para_llevar'   => ['nullable', 'array'],
+            'cosas_para_llevar.*' => ['string'],
 
-            // Campos adicionales
-            'cosas_que_llevar'   => ['nullable', 'array'],
-            'cosas_que_llevar.*' => ['string'],
-            'galeria_imagenes'   => ['nullable', 'array'],
-            'galeria_imagenes.*' => ['url'],
+            // Galería (servicio_imagenes)
+            'imagenes'       => ['sometimes','array','max:5'],
+            'imagenes.*'     => ['nullable'],
+            'imagenes.*.url' => ['sometimes','required','url','max:500'],
+            'imagenes.*.alt' => ['sometimes','nullable','string','max:150'],
         ];
     }
 }

@@ -8,8 +8,10 @@ use App\Http\Requests\UpdateServicioRequest;
 use App\Models\Servicio;
 use App\Models\Habitacion;
 use App\Models\TourSalida;
+use App\Models\ServicioImagen; // 👈 NUEVO
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB; // 👈 NUEVO
 
 class ServicioController extends Controller
 {
@@ -164,7 +166,32 @@ class ServicioController extends Controller
     // POST /api/servicios
     public function store(StoreServicioRequest $request): JsonResponse
     {
-        $servicio = Servicio::create($request->validated());
+        $data = $request->validated();
+
+        $servicio = DB::transaction(function () use ($data) {
+            // 1) Crear servicio
+            $servicio = Servicio::create($data);
+
+            // 2) Guardar imágenes (si llegan)
+            if (!empty($data['imagenes'])) {
+                $imagenes = collect($data['imagenes'])->take(5)->map(function ($item) {
+                    // item puede ser string (url) o array ['url' => ..., 'alt' => ...]
+                    if (is_string($item)) {
+                        return ['url' => $item, 'alt' => null];
+                    }
+                    return [
+                        'url' => $item['url'] ?? null,
+                        'alt' => $item['alt'] ?? null,
+                    ];
+                })->filter(fn($x) => !empty($x['url']))->values()->all();
+
+                if (!empty($imagenes)) {
+                    $servicio->imagenes()->createMany($imagenes);
+                }
+            }
+
+            return $servicio;
+        });
 
         return response()->json([
             'message' => 'Servicio creado exitosamente.',
@@ -175,21 +202,63 @@ class ServicioController extends Controller
     // GET /api/servicios/{servicio}
     public function show(Servicio $servicio): JsonResponse
     {
-        return response()->json(
-            $servicio->only('id','proveedor_id','nombre','tipo','ciudad','pais','descripcion','imagen_url','activo','created_at','updated_at'),
-            200
-        );
+        // 👇 Opcional: incluye galería en la respuesta pública de detalle
+        $servicio->load('imagenes:id,servicio_id,url,alt');
+
+        return response()->json([
+            'id'          => $servicio->id,
+            'proveedor_id'=> $servicio->proveedor_id,
+            'nombre'      => $servicio->nombre,
+            'tipo'        => $servicio->tipo,
+            'ciudad'      => $servicio->ciudad,
+            'pais'        => $servicio->pais,
+            'descripcion' => $servicio->descripcion,
+            'imagen_url'  => $servicio->imagen_url,
+            'activo'      => $servicio->activo,
+            'created_at'  => $servicio->created_at,
+            'updated_at'  => $servicio->updated_at,
+            'imagenes'    => $servicio->imagenes->map(fn($img) => [
+                'url' => $img->url,
+                'alt' => $img->alt,
+            ]),
+        ], 200);
     }
 
     // PUT/PATCH /api/servicios/{servicio}
     public function update(UpdateServicioRequest $request, Servicio $servicio): JsonResponse
     {
-        // impedir cambiar 'tipo' tras crear (opcional)
+        // impedir cambiar 'tipo' tras crear (opcional y ya validado)
         if ($request->filled('tipo') && $request->input('tipo') !== $servicio->tipo) {
             return response()->json(['message' => 'No se permite cambiar el tipo del servicio.'], 422);
         }
 
-        $servicio->update($request->validated());
+        $data = $request->validated();
+
+        DB::transaction(function () use ($servicio, $data) {
+            // 1) Actualizar campos del servicio
+            $servicio->update($data);
+
+            // 2) Si viene 'imagenes', reemplazar la galería completa (estrategia simple)
+            if (array_key_exists('imagenes', $data)) {
+                // borrar actuales y volver a crear
+                $servicio->imagenes()->delete();
+
+                $imagenes = collect($data['imagenes'] ?? [])->take(5)->map(function ($item) {
+                    if (is_string($item)) {
+                        return ['url' => $item, 'alt' => null];
+                    }
+                    return [
+                        'url' => $item['url'] ?? null,
+                        'alt' => $item['alt'] ?? null,
+                    ];
+                })->filter(fn($x) => !empty($x['url']))->values()->all();
+
+                if (!empty($imagenes)) {
+                    $servicio->imagenes()->createMany($imagenes);
+                }
+            }
+        });
+
         $servicio->refresh();
 
         return response()->json([

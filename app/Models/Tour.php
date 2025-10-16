@@ -11,7 +11,7 @@ class Tour extends Model
 
     protected $table = 'tours';
     protected $primaryKey = 'servicio_id';
-    public $incrementing = false;               // PK no autoincremental
+    public $incrementing = false;
     protected $keyType = 'int';
 
     protected $fillable = [
@@ -22,25 +22,23 @@ class Tour extends Model
         'precio',
         'cupos',
         'cosas_para_llevar',
-        'fecha',
     ];
 
     protected $casts = [
-        'duracion'  => 'integer',
-        'precio'    => 'decimal:2',
-        'cupos'     => 'integer',
-        'galeria_imagenes' => 'array',
-        'cosas_para_llevar' => 'array',
-        'fecha' => 'date',
+        'duracion'           => 'integer',
+        'precio'             => 'decimal:2',
+        'cupos'              => 'integer',
+        'cosas_para_llevar'  => 'array',
+        'fecha'              => 'date',
     ];
 
-    // 👇 clave para que {tour} use servicio_id en rutas
+    // Para que {tour} en rutas use servicio_id
     public function getRouteKeyName(): string
     {
         return 'servicio_id';
     }
 
-    /** Servicio padre (debe tener tipo='tour') */
+    /** Servicio padre */
     public function servicio()
     {
         return $this->belongsTo(Servicio::class, 'servicio_id');

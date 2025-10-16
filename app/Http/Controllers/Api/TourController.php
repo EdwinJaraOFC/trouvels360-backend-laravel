@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreTourRequest;
+use App\Http\Requests\UpdateTourRequest;
 use App\Models\Servicio;
+use App\Models\ServicioImagen;
 use App\Models\Tour;
-use App\Models\TourSalida;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -39,9 +41,9 @@ class TourController extends Controller
             $q->whereHas('tour', fn($t)=> $t->where('categoria',$cat));
         }
 
-        // Filtro por fecha y cupos
+        // Filtro por fecha y cupos (usa salidas)
         if ($fecha = $req->query('fecha')) {
-            $cupos = (int) $req->query('cupos', 1); // cupos solicitados
+            $cupos = (int) $req->query('cupos', 1);
             $q->whereHas('salidas', function($s) use ($fecha, $cupos) {
                 $s->whereDate('fecha', $fecha)
                   ->where('estado','programada')
@@ -74,46 +76,29 @@ class TourController extends Controller
     {
         $serv = Servicio::with([
             'tour',
+            'imagenes:id,servicio_id,url,alt',  // 👈 incluir galería simple
             'actividades',
             'salidas' => fn($q) => $q->where('estado','programada')->orderBy('fecha')->orderBy('hora')
         ])->where('tipo','tour')->findOrFail($tour);
-        
+
         // Filtrar por cupos si se envía
         if ($req->filled('cupos')) {
             $cupos = (int) $req->query('cupos', 1);
             $serv->salidas = $serv->salidas->filter(fn($s) => ($s->cupo_total - $s->cupo_reservado) >= $cupos);
         }
 
-        return response()->json([
-            'servicio' => $serv,
-        ]);
+        return response()->json(['servicio' => $serv]);
     }
 
     /** POST /api/tours  (crea servicio + tour) */
-    public function store(Request $req)
+    public function store(StoreTourRequest $req)
     {
-        $user = Auth::user();
-        if (!$user || $user->rol !== 'proveedor') abort(403, 'Solo proveedores pueden crear tours.');
+        $user = Auth::user(); // la policy ya valida rol proveedor en el request
 
-        $data = $req->validate([
-            'nombre'             => ['required','string','max:150'],
-            'descripcion'        => ['nullable','string'],
-            'ciudad'             => ['required','string','max:100'],
-            'pais'               => ['required','string','max:100'],
-            'imagen_url'         => ['nullable','url'],
-            'activo'             => ['boolean'],
-            'categoria'          => ['nullable','string','max:100'],
-            'duracion'           => ['nullable','integer','min:0'],
-            'precio'             => ['required','numeric','min:0'],
-            'cupos'              => ['nullable','integer','min:1'],
-            'fecha'              => ['required','date'],
-            'cosas_que_llevar'   => ['nullable','array'],
-            'cosas_que_llevar.*' => ['string'],
-            'galeria_imagenes'   => ['nullable','array'],
-            'galeria_imagenes.*' => ['url'],
-        ]);
+        $data = $req->validated();
 
         $serv = DB::transaction(function() use ($data, $user) {
+            // 1) Servicio (portada en imagen_url)
             $serv = Servicio::create([
                 'proveedor_id' => $user->id,
                 'nombre'       => $data['nombre'],
@@ -125,14 +110,28 @@ class TourController extends Controller
                 'activo'       => $data['activo'] ?? true,
             ]);
 
+            // 2) Tour (detalle)
             Tour::create([
-                'servicio_id' => $serv->id,
-                'categoria'   => $data['categoria'] ?? null,
-                'duracion'    => $data['duracion'] ?? null,
-                'precio'      => $data['precio'],
-                'cupos'       => $data['cupos'] ?? null,
-                'fecha'       => $data['fecha'],
+                'servicio_id'        => $serv->id,
+                'categoria'          => $data['categoria'] ?? null,
+                'duracion'           => $data['duracion'] ?? null,
+                'precio'             => $data['precio'],
+                'cupos'              => $data['cupos'] ?? null,
+                'fecha'              => $data['fecha'], // requerido actualmente
+                'cosas_para_llevar'  => $data['cosas_para_llevar'] ?? null,
             ]);
+
+            // 3) Galería simple (opcional, máx 5)
+            if (!empty($data['imagenes'])) {
+                $imgs = collect($data['imagenes'])->take(5)->map(function ($item) {
+                    if (is_string($item)) return ['url' => $item, 'alt' => null];
+                    return ['url' => $item['url'] ?? null, 'alt' => $item['alt'] ?? null];
+                })->filter(fn($x) => !empty($x['url']))->values()->all();
+
+                if (!empty($imgs)) {
+                    $serv->imagenes()->createMany($imgs);
+                }
+            }
 
             return $serv->load('tour');
         });
@@ -144,43 +143,48 @@ class TourController extends Controller
     }
 
     /** PUT /api/tours/{tour}  (actualiza servicio + tour) */
-    public function update(Request $req, $tour)
+    public function update(UpdateTourRequest $req, $tour)
     {
         $serv = Servicio::where('tipo','tour')->findOrFail($tour);
         $this->assertOwnership($serv);
 
-        $data = $req->validate([
-            'nombre'       => ['sometimes','string','max:150'],
-            'descripcion'  => ['sometimes','nullable','string'],
-            'ciudad'       => ['sometimes','string','max:100'],
-            'pais'         => ['sometimes','string','max:100'],
-            'imagen_url'   => ['sometimes','nullable','url'],
-            'activo'       => ['sometimes','boolean'],
-            'categoria'    => ['sometimes','nullable','string','max:100'],
-            'duracion'     => ['sometimes','nullable','integer','min:0'],
-            'precio'       => ['sometimes','numeric','min:0'],
-            'cupos'        => ['sometimes','nullable','integer','min:1'],
-        ]);
+        $data = $req->validated();
 
         DB::transaction(function() use ($serv, $data) {
+            // 1) Servicio
             $serv->fill(array_intersect_key($data, array_flip([
                 'nombre','descripcion','ciudad','pais','imagen_url','activo'
             ])))->save();
 
+            // 2) Tour
             if ($serv->tour) {
                 $serv->tour->fill(array_intersect_key($data, array_flip([
-                    'categoria','duracion','precio','cupos'
+                    'categoria','duracion','precio','cupos','fecha','cosas_para_llevar'
                 ])))->save();
+            }
+
+            // 3) Si viene 'imagenes', reemplazar galería (simple)
+            if (array_key_exists('imagenes', $data)) {
+                $serv->imagenes()->delete();
+
+                $imgs = collect($data['imagenes'] ?? [])->take(5)->map(function ($item) {
+                    if (is_string($item)) return ['url' => $item, 'alt' => null];
+                    return ['url' => $item['url'] ?? null, 'alt' => $item['alt'] ?? null];
+                })->filter(fn($x) => !empty($x['url']))->values()->all();
+
+                if (!empty($imgs)) {
+                    $serv->imagenes()->createMany($imgs);
+                }
             }
         });
 
         return response()->json([
             'message' => 'Tour actualizado correctamente',
-            'data'    => $serv->load('tour'),
+            'data'    => $serv->load(['tour','imagenes:id,servicio_id,url,alt']),
         ]);
     }
 
-    /** DELETE /api/tours/{tour}  (borra tour y salidas) */
+    /** DELETE /api/tours/{tour} */
     public function destroy($tour)
     {
         $serv = Servicio::where('tipo','tour')->findOrFail($tour);

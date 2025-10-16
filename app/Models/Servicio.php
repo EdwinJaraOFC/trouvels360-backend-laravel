@@ -17,8 +17,8 @@ class Servicio extends Model
         'tipo',          // 'hotel' | 'tour'
         'descripcion',
         'ciudad',
-        'pais',          // <-- agregado
-        'imagen_url',
+        'pais',
+        'imagen_url',    // portada (principal)
         'activo',
     ];
 
@@ -48,10 +48,10 @@ class Servicio extends Model
         return $this->hasManyThrough(
             ReservaHabitacion::class,
             Habitacion::class,
-            'servicio_id',      // FK en Habitacion -> Servicio
-            'habitacion_id',    // FK en ReservaHabitacion -> Habitacion
-            'id',               // PK en Servicio
-            'id'                // PK en Habitacion
+            'servicio_id',   // FK en Habitacion -> Servicio
+            'habitacion_id', // FK en ReservaHabitacion -> Habitacion
+            'id',            // PK en Servicio
+            'id'             // PK en Habitacion
         );
     }
 
@@ -70,6 +70,18 @@ class Servicio extends Model
     {
         return $this->hasMany(TourActividad::class, 'servicio_id', 'id')
                     ->orderBy('orden');
+    }
+
+    // --- Imágenes (lista simple 1:N, sin orden ni “portada” marcada) ---
+    public function imagenes()
+    {
+        return $this->hasMany(ServicioImagen::class);
+    }
+
+    // Helper opcional: URL de portada (usa imagen_url del servicio)
+    public function getPortadaUrlAttribute(): ?string
+    {
+        return $this->imagen_url;
     }
 
     // 🔎 Scopes

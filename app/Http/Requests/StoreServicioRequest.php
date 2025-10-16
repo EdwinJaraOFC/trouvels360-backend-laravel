@@ -16,7 +16,6 @@ class StoreServicioRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         if ($this->user()) {
-            // Fuerza el dueño al proveedor autenticado
             $this->merge(['proveedor_id' => $this->user()->id]);
         }
 
@@ -31,7 +30,6 @@ class StoreServicioRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Ya no lo pides al cliente: lo pones tú en prepareForValidation
             'proveedor_id' => [
                 'required',
                 Rule::exists('usuarios','id')->where('rol','proveedor'),
@@ -40,9 +38,16 @@ class StoreServicioRequest extends FormRequest
             'tipo'         => ['required', Rule::in(['hotel','tour'])],
             'descripcion'  => ['sometimes','nullable','string'],
             'ciudad'       => ['required','string','max:100'],
-            'pais'         => ['required','string','max:100'], // <-- nuevo
+            'pais'         => ['required','string','max:100'],
             'imagen_url'   => ['sometimes','nullable','url','max:500'],
             'activo'       => ['sometimes','boolean'],
+
+            // 👇 NUEVO: lista simple de imágenes (máx 5)
+            'imagenes'     => ['sometimes','array','max:5'],
+            // puedes enviar string o objetos {url, alt}
+            'imagenes.*'   => ['nullable'], // validamos cada item debajo
+            'imagenes.*.url' => ['sometimes','required','url','max:500'],
+            'imagenes.*.alt' => ['sometimes','nullable','string','max:150'],
         ];
     }
 }

@@ -6,9 +6,6 @@ use App\Models\Tour;
 use App\Models\Servicio;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<Tour>
- */
 class TourFactory extends Factory
 {
     protected $model = Tour::class;
@@ -16,12 +13,18 @@ class TourFactory extends Factory
     public function definition(): array
     {
         return [
-            // Crea el Servicio asociado (tipo = 'tour') y toma su id como PK del Tour
-            'servicio_id'          => Servicio::factory()->state(['tipo' => 'tour']),
-            'categoria'            => $this->faker->randomElement(['Aventura','Gastronomía','Cultura','Relajación']),
-            'duracion_min'         => $this->faker->numberBetween(120, 480), // 2h a 8h
-            'precio_persona'       => $this->faker->randomFloat(2, 20, 150),
-            'capacidad_por_salida' => $this->faker->numberBetween(8, 40),    // default para salidas
+            // Crea el Servicio asociado (tipo = 'tour') y usa su id como PK del Tour
+            'servicio_id'       => Servicio::factory()->state(['tipo' => 'tour']),
+            'categoria'         => $this->faker->randomElement(['Gastronomía','Aventura','Cultura','Relajación']),
+            'fecha'             => $this->faker->dateTimeBetween('now', '+6 months')->format('Y-m-d'),
+            'duracion'          => $this->faker->numberBetween(120, 480), // 2h–8h
+            'precio'            => $this->faker->randomFloat(2, 20, 150),
+            'cupos'             => $this->faker->numberBetween(8, 40),
+            // Importante: como array (el cast en el modelo lo convertirá a JSON)
+            'cosas_para_llevar' => $this->faker->randomElements(
+                ['Cámara', 'Bloqueador solar', 'Gorra', 'Zapatillas', 'Agua', 'Gafas de sol'],
+                rand(2, 4)
+            ),
         ];
     }
 }

@@ -16,14 +16,28 @@ use App\Http\Controllers\Api\ReviewController;
 // Healthcheck
 Route::get('ping', fn () => response()->json(['pong' => true]));
 
-// ---------- Usuarios (público por ahora) ----------
-Route::apiResource('usuarios', UsuarioController::class);
+// ---------- Usuarios ----------
+
+// Público: solo listar y ver detalle
+Route::apiResource('usuarios', UsuarioController::class)->only(['index','show']);
+
+// Protegido: actualizar o eliminar la propia cuenta
+Route::middleware('auth:sanctum')->group(function () {
+    // Actualizar usuario autenticado
+    Route::patch('usuarios/me', [UsuarioController::class, 'updateMe']);
+    Route::put('usuarios/me',   [UsuarioController::class, 'updateMe']);
+
+    // Eliminar su propia cuenta
+    Route::delete('usuarios/me', [UsuarioController::class, 'destroyMe']);
+});
 
 // ---------- Auth ----------
-Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
+Route::post('auth/login',    [AuthController::class, 'login'])->middleware('throttle:6,1');
+Route::post('auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('auth/me', [AuthController::class, 'me']);
-    Route::post('auth/logout', [AuthController::class, 'logout']);
+    Route::get('auth/me',     [AuthController::class, 'me']);
+    Route::post('auth/logout',[AuthController::class, 'logout']);
 });
 
 // ---------- Servicios ----------
@@ -33,14 +47,8 @@ Route::apiResource('servicios', ServicioController::class)->only(['index','show'
 // Protegido: crear/actualizar/eliminar
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('servicios', ServicioController::class)->only(['store','update','destroy']);
+    Route::get('proveedor/servicios', [ServicioController::class, 'indexMine']);
 });
-
-// ⚠️ Elimina este bloque duplicado (ya cubierto arriba)
-// Route::middleware('auth:sanctum')->group(function () {
-//   Route::post('servicios',  [ServicioController::class, 'store'])->can('create', \App\Models\Servicio::class);
-//   Route::patch('servicios/{servicio}', [ServicioController::class, 'update'])->can('update', 'servicio')->whereNumber('servicio');
-//   Route::delete('servicios/{servicio}',[ServicioController::class, 'destroy'])->can('delete', 'servicio')->whereNumber('servicio');
-// });
 
 // ---------- Hoteles ----------
 // Público

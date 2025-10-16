@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreUsuarioRequest;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -11,6 +12,46 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    // POST /api/auth/register
+    public function register(StoreUsuarioRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+
+        // Limpia campos según el rol (una sola tabla)
+        if ($data['rol'] === 'viajero') {
+            $data['empresa_nombre'] = null;
+            $data['telefono'] = null;
+            $data['ruc'] = null;
+        } else { // proveedor
+            $data['nombre'] = null;
+            $data['apellido'] = null;
+        }
+
+        // Crea el usuario (el modelo hashea la contraseña automáticamente)
+        $user = Usuario::create($data);
+
+        // Token opcional: inicia sesión inmediatamente tras el registro
+        $token = $user->createToken($request->input('device_name', 'api'))->plainTextToken;
+
+        return response()->json([
+            'message' => 'Registro exitoso.',
+            'data' => [
+                'user' => [
+                    'id'              => $user->id,
+                    'rol'             => $user->rol,
+                    'nombre'          => $user->nombre,
+                    'apellido'        => $user->apellido,
+                    'empresa_nombre'  => $user->empresa_nombre,
+                    'telefono'        => $user->telefono,
+                    'ruc'             => $user->ruc,
+                    'email'           => $user->email,
+                    'created_at'      => $user->created_at,
+                ],
+                // 'token' => $token, // si no quieres autologin, elimina esta línea
+            ],
+        ], 201);
+    }
+
     // POST /api/auth/login
     public function login(Request $request): JsonResponse
     {
@@ -28,11 +69,6 @@ class AuthController extends Controller
                 'email' => ['Credenciales inválidas.'],
             ]);
         }
-
-        // (Opcional) exigir email verificado:
-        // if (is_null($user->email_verified_at)) {
-        //     return response()->json(['message' => 'Verifica tu correo antes de iniciar sesión.'], 403);
-        // }
 
         $token = $user->createToken($credentials['device_name'] ?? 'api')->plainTextToken;
 
@@ -53,7 +89,7 @@ class AuthController extends Controller
         ], 200);
     }
 
-    // POST /api/auth/logout  (protegido) — invalida el token actual
+    // POST /api/auth/logout  (protegido)
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();

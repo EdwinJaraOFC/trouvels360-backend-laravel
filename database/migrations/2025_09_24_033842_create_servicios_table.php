@@ -22,14 +22,15 @@ return new class extends Migration {
             $table->string('ciudad', 100);
             $table->string('pais', 100);
 
-            // Imagen principal opcional
+            // Imagen principal opcional (portada/fallback)
             $table->string('imagen_url', 500)->nullable();
 
             $table->boolean('activo')->default(true);
 
             $table->timestamps();
 
-            // Índices
+            // Índices prácticos
+            $table->index(['proveedor_id', 'tipo', 'activo']); // panel de proveedor
             $table->index(['pais', 'ciudad']);
             $table->index(['ciudad', 'tipo']);
             $table->index(['activo', 'tipo']);

@@ -8,26 +8,34 @@ class UpdateTourRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // La verificación de dueño se hace en el controller; aquí validamos rol mínimo
         return auth()->check() && auth()->user()->rol === 'proveedor';
     }
 
     public function rules(): array
     {
         return [
-            // Campos del SERVICIO (opcionales)
+            // Servicio (opcionales)
             'nombre'      => ['sometimes','string','max:150'],
             'descripcion' => ['sometimes','nullable','string'],
             'ciudad'      => ['sometimes','string','max:100'],
-            'pais'        => ['sometimes','string','max:100'], // <- permitir actualizar país
-            'imagen_url'  => ['sometimes','nullable','url'],
+            'pais'        => ['sometimes','string','max:100'],
+            'imagen_url'  => ['sometimes','nullable','url','max:500'],
             'activo'      => ['sometimes','boolean'],
 
-            // Campos del TOUR (opcionales)
-            'categoria'            => ['sometimes','nullable','in:Gastronomía,Aventura,Cultura,Relajación'],
-            'duracion_min'         => ['sometimes','nullable','integer','min:0'],
-            'precio_persona'       => ['sometimes','numeric','min:0'],
-            'capacidad_por_salida' => ['sometimes','nullable','integer','min:1'],
+            // Tour (opcionales)
+            'categoria'           => ['sometimes','nullable','in:Gastronomía,Aventura,Cultura,Relajación'],
+            'duracion'            => ['sometimes','nullable','integer','min:0'],
+            'precio'              => ['sometimes','numeric','min:0'],
+            'cupos'               => ['sometimes','nullable','integer','min:1'],
+            'fecha'               => ['sometimes','date'],
+            'cosas_para_llevar'   => ['sometimes', 'array'],
+            'cosas_para_llevar.*' => ['string'],
+
+            // Galería (reemplazo total si viene)
+            'imagenes'       => ['sometimes','array','max:5'],
+            'imagenes.*'     => ['nullable'],
+            'imagenes.*.url' => ['sometimes','required','url','max:500'],
+            'imagenes.*.alt' => ['sometimes','nullable','string','max:150'],
         ];
     }
 }

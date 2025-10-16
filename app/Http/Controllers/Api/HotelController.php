@@ -14,6 +14,7 @@ use App\Models\ReservaHabitacion;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Models\ServicioImagen;
 use Illuminate\Support\Facades\DB;
 
 class HotelController extends Controller
@@ -136,17 +137,29 @@ class HotelController extends Controller
         $data = $request->validated();
 
         $hotel = DB::transaction(function () use ($data, $user) {
-            // 1) Crear SERVICIO (nombre/ciudad/pais/… vienen directos del body)
+            // 1) Crear SERVICIO
             $servicio = Servicio::create([
-                'proveedor_id' => $user->id,                 // dueño = usuario autenticado
+                'proveedor_id' => $user->id,
                 'nombre'       => $data['nombre'],
-                'tipo'         => 'hotel',                   // se fuerza aquí
+                'tipo'         => 'hotel',
                 'descripcion'  => $data['descripcion'] ?? null,
                 'ciudad'       => $data['ciudad'],
                 'pais'         => $data['pais'],
                 'imagen_url'   => $data['imagen_url'] ?? null,
                 'activo'       => $data['activo'] ?? true,
             ]);
+
+            // 1.1) Galería simple (si viene) – máx 5
+            if (!empty($data['imagenes'])) {
+                $imgs = collect($data['imagenes'])->take(5)->map(function ($item) {
+                    if (is_string($item)) return ['url' => $item, 'alt' => null];
+                    return ['url' => $item['url'] ?? null, 'alt' => $item['alt'] ?? null];
+                })->filter(fn($x) => !empty($x['url']))->values()->all();
+
+                if (!empty($imgs)) {
+                    $servicio->imagenes()->createMany($imgs);
+                }
+            }
 
             // 2) Crear HOTEL (detalle)
             return Hotel::create([
@@ -162,10 +175,16 @@ class HotelController extends Controller
         ], 201);
     }
 
+
     // GET /api/hoteles/{servicio_id}
     public function show(int $servicio_id): JsonResponse
     {
-        $hotel = Hotel::with(['servicio:id,nombre,ciudad,pais','habitaciones'])->find($servicio_id);
+        $hotel = Hotel::with([
+            'servicio:id,nombre,ciudad,pais,imagen_url',
+            'servicio.imagenes:id,servicio_id,url,alt',
+            'habitaciones'
+        ])->find($servicio_id);
+
         if (!$hotel) return response()->json(['message' => 'Hotel no encontrado'], 404);
 
         return response()->json([
@@ -178,6 +197,11 @@ class HotelController extends Controller
                 'nombre'      => $hotel->servicio->nombre ?? null,
                 'ciudad'      => $hotel->servicio->ciudad ?? null,
                 'pais'        => $hotel->servicio->pais ?? null,
+                'imagen_url'  => $hotel->servicio->imagen_url,
+                'imagenes'    => $hotel->servicio->imagenes->map(fn($img) => [
+                    'url' => $img->url,
+                    'alt' => $img->alt,
+                ]),
             ],
             'habitaciones'=> $hotel->habitaciones->map(fn($h) => [
                 'id'                 => $h->id,
@@ -190,6 +214,7 @@ class HotelController extends Controller
         ], 200);
     }
 
+
     // PUT /api/hoteles/{servicio_id}
     public function update(UpdateHotelRequest $request, int $servicio_id): JsonResponse
     {
@@ -201,18 +226,32 @@ class HotelController extends Controller
         $data = $request->validated();
 
         DB::transaction(function () use ($hotel, $data) {
-            // Actualizar HOTEL (solo si hay datos de hotel)
+            // 1) Actualizar HOTEL
             $hotelData = array_intersect_key($data, array_flip(['direccion', 'estrellas']));
             if (!empty($hotelData)) {
                 $hotel->update($hotelData);
             }
 
-            // Actualizar SERVICIO relacionado (nombre, descripción, etc.)
+            // 2) Actualizar SERVICIO
             $servicioData = array_intersect_key($data, array_flip([
                 'nombre', 'descripcion', 'ciudad', 'pais', 'imagen_url', 'activo'
             ]));
             if (!empty($servicioData)) {
                 $hotel->servicio->update($servicioData);
+            }
+
+            // 3) Reemplazar galería si viene 'imagenes'
+            if (array_key_exists('imagenes', $data)) {
+                $hotel->servicio->imagenes()->delete();
+
+                $imgs = collect($data['imagenes'] ?? [])->take(5)->map(function ($item) {
+                    if (is_string($item)) return ['url' => $item, 'alt' => null];
+                    return ['url' => $item['url'] ?? null, 'alt' => $item['alt'] ?? null];
+                })->filter(fn($x) => !empty($x['url']))->values()->all();
+
+                if (!empty($imgs)) {
+                    $hotel->servicio->imagenes()->createMany($imgs);
+                }
             }
         });
 
@@ -221,11 +260,12 @@ class HotelController extends Controller
         return response()->json([
             'message' => 'Hotel actualizado correctamente.',
             'data'    => [
-                'hotel' => $hotel,
+                'hotel'    => $hotel,
                 'servicio' => $hotel->servicio,
             ],
         ], 200);
     }
+
 
     // DELETE /api/hoteles/{servicio_id}
     public function destroy(UpdateHotelRequest $request, int $servicio_id): JsonResponse

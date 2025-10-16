@@ -22,6 +22,7 @@ class Tour extends Model
         'precio',
         'cupos',
         'cosas_para_llevar',
+        'fecha',
     ];
 
     protected $casts = [
@@ -30,6 +31,7 @@ class Tour extends Model
         'cupos'     => 'integer',
         'galeria_imagenes' => 'array',
         'cosas_para_llevar' => 'array',
+        'fecha' => 'date',
     ];
 
     // 👇 clave para que {tour} use servicio_id en rutas

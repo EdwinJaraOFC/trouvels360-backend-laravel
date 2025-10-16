@@ -46,14 +46,8 @@ Route::apiResource('servicios', ServicioController::class)->only(['index','show'
 // Protegido: crear/actualizar/eliminar
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('servicios', ServicioController::class)->only(['store','update','destroy']);
+    Route::get('proveedor/servicios', [ServicioController::class, 'indexMine']);
 });
-
-// ⚠️ Elimina este bloque duplicado (ya cubierto arriba)
-// Route::middleware('auth:sanctum')->group(function () {
-//   Route::post('servicios',  [ServicioController::class, 'store'])->can('create', \App\Models\Servicio::class);
-//   Route::patch('servicios/{servicio}', [ServicioController::class, 'update'])->can('update', 'servicio')->whereNumber('servicio');
-//   Route::delete('servicios/{servicio}',[ServicioController::class, 'destroy'])->can('delete', 'servicio')->whereNumber('servicio');
-// });
 
 // ---------- Hoteles ----------
 // Público

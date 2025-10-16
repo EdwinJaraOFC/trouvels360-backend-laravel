@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreServicioRequest;
 use App\Http\Requests\UpdateServicioRequest;
 use App\Models\Servicio;
+use App\Models\Habitacion;
+use App\Models\TourSalida;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -42,6 +44,121 @@ class ServicioController extends Controller
         $paginator = $q->paginate($perPage);
 
         return response()->json($paginator, 200);
+    }
+
+    // GET /api/proveedor/servicios (privado - requiere auth)
+    public function indexMine(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $tipo   = $request->query('tipo');   // 'hotel' | 'tour' | null
+        $ciudad = $request->query('ciudad');
+        $pais   = $request->query('pais');
+
+        // Solo filtrar por 'activo' si el parámetro viene en la URL
+        $activo = $request->has('activo')
+            ? filter_var($request->query('activo'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
+            : null;
+
+        $search = $request->query('search');
+
+        $perPage   = min((int) $request->query('per_page', 15), 100);
+        $sort      = $request->query('sort', '-created_at'); // ej: 'nombre' o '-nombre'
+        $dir       = str_starts_with($sort, '-') ? 'desc' : 'asc';
+        $sortField = ltrim($sort, '-');
+
+        $sortable = ['nombre', 'tipo', 'ciudad', 'pais', 'activo', 'created_at'];
+        if (!in_array($sortField, $sortable, true)) {
+            $sortField = 'created_at';
+        }
+
+        $query = Servicio::query()
+            ->where('proveedor_id', $user->id)
+            ->when($tipo,   fn($q) => $q->where('tipo', $tipo))
+            ->when($ciudad, fn($q) => $q->where('ciudad', $ciudad))
+            ->when($pais,   fn($q) => $q->where('pais', $pais))
+            ->when($activo !== null, fn($q) => $q->where('activo', $activo))
+            ->when($search, fn($q) => $q->where('nombre', 'like', "%{$search}%"));
+
+        // Relaciones + métricas
+        $query->with([
+                // OJO: hoteles no tiene columna 'id' → NO la pidas
+                'hotel:servicio_id,direccion,estrellas',
+                // tours también usa PK = servicio_id; su precio es 'precio'
+                'tour:servicio_id,categoria,fecha,duracion,precio',
+            ])
+            ->withCount([
+                'habitaciones as habitaciones_count',
+                'salidas as salidas_count',
+            ])
+            ->select('servicios.*')
+            ->selectSub(
+                Habitacion::selectRaw('MIN(precio_por_noche)')
+                    ->whereColumn('servicio_id', 'servicios.id'),
+                'tarifa_min_hotel'
+            )
+            ->selectSub(
+                TourSalida::selectRaw('COUNT(*)')
+                    ->whereColumn('servicio_id', 'servicios.id')
+                    ->where('fecha', '>=', now()->toDateString()),
+                'proximas_salidas_count'
+            )
+            ->orderBy($sortField, $dir);
+
+        $servicios = $query->paginate($perPage)->appends($request->query());
+
+        $data = $servicios->getCollection()->map(function ($s) {
+            $base = [
+                'id'          => $s->id,
+                'tipo'        => $s->tipo,
+                'nombre'      => $s->nombre,
+                'descripcion' => $s->descripcion,
+                'ciudad'      => $s->ciudad,
+                'pais'        => $s->pais,
+                'imagen_url'  => $s->imagen_url,
+                'activo'      => (bool) $s->activo,
+                'created_at'  => $s->created_at,
+            ];
+
+            if ($s->tipo === 'hotel') {
+                return $base + [
+                    'meta_tipo' => [
+                        'direccion'           => $s->hotel->direccion ?? null,
+                        'estrellas'           => $s->hotel->estrellas ?? null,
+                        'habitaciones_count'  => $s->habitaciones_count,
+                        'tarifa_min_desde'    => $s->tarifa_min_hotel !== null ? (float) $s->tarifa_min_hotel : null,
+                    ],
+                ];
+            }
+
+            // tipo === 'tour'
+            return $base + [
+                'meta_tipo' => [
+                    'categoria'         => $s->tour->categoria ?? null,
+                    'fecha_base'        => $s->tour->fecha ?? null,      // si mantienes fecha en tours
+                    'duracion'          => $s->tour->duracion ?? null,
+                    'precio'            => isset($s->tour->precio) ? (float) $s->tour->precio : null,
+                    'salidas_count'     => $s->salidas_count,
+                    'proximas_salidas'  => (int) $s->proximas_salidas_count,
+                ],
+            ];
+        });
+
+        return response()->json([
+            'data'  => $data,
+            'meta'  => [
+                'total'        => $servicios->total(),
+                'per_page'     => $servicios->perPage(),
+                'current_page' => $servicios->currentPage(),
+                'last_page'    => $servicios->lastPage(),
+            ],
+            'links' => [
+                'first' => $servicios->url(1),
+                'prev'  => $servicios->previousPageUrl(),
+                'next'  => $servicios->nextPageUrl(),
+                'last'  => $servicios->url($servicios->lastPage()),
+            ],
+        ]);
     }
 
     // POST /api/servicios

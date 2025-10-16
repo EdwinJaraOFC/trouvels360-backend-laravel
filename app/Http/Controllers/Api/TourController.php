@@ -106,6 +106,7 @@ class TourController extends Controller
             'duracion'           => ['nullable','integer','min:0'],
             'precio'             => ['required','numeric','min:0'],
             'cupos'              => ['nullable','integer','min:1'],
+            'fecha'              => ['required','date'],
             'cosas_que_llevar'   => ['nullable','array'],
             'cosas_que_llevar.*' => ['string'],
             'galeria_imagenes'   => ['nullable','array'],
@@ -130,6 +131,7 @@ class TourController extends Controller
                 'duracion'    => $data['duracion'] ?? null,
                 'precio'      => $data['precio'],
                 'cupos'       => $data['cupos'] ?? null,
+                'fecha'       => $data['fecha'],
             ]);
 
             return $serv->load('tour');

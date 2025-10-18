@@ -92,4 +92,23 @@ class ServicioFactory extends Factory
             }
         });
     }
+
+    /**
+     * Después de crear un servicio, asegura que tenga 5 imágenes en total.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Servicio $servicio) {
+            $actual = $servicio->imagenes()->count();
+            $faltan = 5 - $actual;
+
+            if ($faltan > 0) {
+                ServicioImagen::factory()
+                    ->count($faltan)
+                    ->for($servicio)
+                    ->create();
+            }
+        });
+    }
+
 }

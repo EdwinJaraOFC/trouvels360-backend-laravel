@@ -6,7 +6,7 @@ use Illuminate\Database\Seeder;
 
 use App\Models\Usuario;
 use App\Models\Servicio;
-use App\Models\ServicioImagen;
+// use App\Models\ServicioImagen; // ← ya no se usa directamente
 use App\Models\Hotel;
 use App\Models\Habitacion;
 use App\Models\ReservaHabitacion;
@@ -97,7 +97,7 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($hotelesConfig as $cfg) {
-            // 1) Servicio tipo hotel
+            // 1) Servicio tipo hotel (el factory completará a 5 imágenes automáticamente)
             $servicio = Servicio::factory()->create([
                 'proveedor_id' => $proveedor->id,
                 'nombre'       => $cfg['servicio']['nombre'],
@@ -108,9 +108,6 @@ class DatabaseSeeder extends Seeder
                 'imagen_url'   => $cfg['servicio']['imagen_url'], // portada
                 'activo'       => true,
             ]);
-
-            // 1.1) Galería simple (3 imágenes)
-            ServicioImagen::factory()->count(3)->for($servicio)->create();
 
             // 2) Hotel (detalle)
             $hotel = Hotel::factory()->create([
@@ -137,20 +134,17 @@ class DatabaseSeeder extends Seeder
         }
 
         // ---------------------------------------------------------
-        // Servicios adicionales (mezcla hotel/tour) con galería (3 imgs)
+        // Servicios adicionales (mezcla hotel/tour) → el factory completa a 5 imágenes
         // ---------------------------------------------------------
         Servicio::factory()
             ->count(10)
-            ->has(ServicioImagen::factory()->count(3), 'imagenes')
             ->create();
 
         // ---------------------------------------------------------
-        // TOUR PACK: 1 tour con salidas, actividades, reservas + galería
+        // TOUR PACK: 1 tour con salidas, actividades, reservas
+        // (el servicio del tour también quedará con 5 imágenes por el factory)
         // ---------------------------------------------------------
         $tour = Tour::factory()->create();
-
-        // Galería del servicio del tour (3 imágenes simples)
-        ServicioImagen::factory()->count(3)->for($tour->servicio)->create();
 
         // Salidas del tour
         TourSalida::factory()->count(3)->create([
@@ -172,11 +166,11 @@ class DatabaseSeeder extends Seeder
         });
 
         // -------Reviews-------------
-        $usuarioIds = Usuario::pluck('id'); 
+        $usuarioIds = Usuario::pluck('id');
 
         Servicio::all()->each(function ($servicio) use ($usuarioIds) {
             Review::factory()
-                ->count(3) // generar 3 reseñas por servicio
+                ->count(3)
                 ->state(function () use ($servicio, $usuarioIds) {
                     return [
                         'servicio_id' => $servicio->id,
@@ -185,6 +179,5 @@ class DatabaseSeeder extends Seeder
                 })
                 ->create();
         });
-
     }
 }

@@ -45,7 +45,7 @@ class DatabaseSeeder extends Seeder
         Usuario::factory()->proveedor()->count(5)->create();
 
         // ---------------------------------------------------------
-        // HOTELS PACK: 3 hoteles con varios tipos de habitaciones
+        // HOTELS PACK: 5 hoteles con varios tipos de habitaciones
         // ---------------------------------------------------------
         $hotelesConfig = [
             [
@@ -92,6 +92,38 @@ class DatabaseSeeder extends Seeder
                     ['nombre' => 'Deluxe',  'cap_adultos' => 2, 'cap_ninos' => 1, 'cantidad' => 10, 'precio' => 220.00, 'desc' => 'Amplia, con balcón.'],
                     ['nombre' => 'Suite',   'cap_adultos' => 2, 'cap_ninos' => 2, 'cantidad' => 6,  'precio' => 380.00, 'desc' => 'Suite con jacuzzi.'],
                     ['nombre' => 'Family',  'cap_adultos' => 3, 'cap_ninos' => 2, 'cantidad' => 5,  'precio' => 420.00, 'desc' => '2 ambientes conectados.'],
+                ],
+            ],
+            // NUEVO 4: Trujillo
+            [
+                'servicio' => [
+                    'nombre'      => 'Costa Verde Trujillo',
+                    'ciudad'      => 'Trujillo',
+                    'pais'        => 'Perú',
+                    'descripcion' => 'Cerca a la playa de Huanchaco y al centro histórico.',
+                    'imagen_url'  => 'https://cf.bstatic.com/xdata/images/hotel/max1024x768/219692318.jpg?k=9f1b51d5b9d3e2b2d9e4e5d3c9f8a111a3c94f0f6b2b3b1a',
+                ],
+                'hotel' => ['estrellas' => 4],
+                'habitaciones' => [
+                    ['nombre' => 'Standard', 'cap_adultos' => 2, 'cap_ninos' => 0, 'cantidad' => 18, 'precio' => 160.00, 'desc' => 'Confortable y funcional.'],
+                    ['nombre' => 'Doble',    'cap_adultos' => 2, 'cap_ninos' => 1, 'cantidad' => 12, 'precio' => 210.00, 'desc' => 'Vista a la ciudad.'],
+                    ['nombre' => 'Suite',    'cap_adultos' => 3, 'cap_ninos' => 1, 'cantidad' => 6,  'precio' => 360.00, 'desc' => 'Suite con sala y balcón.'],
+                ],
+            ],
+            // NUEVO 5: Piura
+            [
+                'servicio' => [
+                    'nombre'      => 'Piura Sun Resort',
+                    'ciudad'      => 'Piura',
+                    'pais'        => 'Perú',
+                    'descripcion' => 'Resort con clima cálido todo el año y piscina.',
+                    'imagen_url'  => 'https://cf.bstatic.com/xdata/images/hotel/max1024x768/122233123.jpg?k=4a2c0a0102030405060708090a0b0c0d',
+                ],
+                'hotel' => ['estrellas' => 4],
+                'habitaciones' => [
+                    ['nombre' => 'Bungalow', 'cap_adultos' => 2, 'cap_ninos' => 2, 'cantidad' => 10, 'precio' => 300.00, 'desc' => 'Bungalow privado con terraza.'],
+                    ['nombre' => 'Doble',    'cap_adultos' => 2, 'cap_ninos' => 1, 'cantidad' => 14, 'precio' => 190.00, 'desc' => 'Con vista a la piscina.'],
+                    ['nombre' => 'Familiar', 'cap_adultos' => 3, 'cap_ninos' => 2, 'cantidad' => 8,  'precio' => 280.00, 'desc' => 'Espaciosa para familias.'],
                 ],
             ],
         ];
@@ -165,8 +197,7 @@ class DatabaseSeeder extends Seeder
         });
 
         // ---------------------------------------------------------
-        // 💡 NUEVO: Crear salidas para *todos* los tours existentes
-        // (solo si aún no tienen)
+        // 💡 NUEVO: Crear salidas para *todos* los tours existentes (si no tienen)
         // ---------------------------------------------------------
         $tours = Tour::query()->get();
 

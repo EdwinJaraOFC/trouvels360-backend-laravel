@@ -85,7 +85,7 @@ class DatabaseSeeder extends Seeder
                     'ciudad'      => 'Arequipa',
                     'pais'        => 'Perú',
                     'descripcion' => 'Hotel con piscina y vista al Misti.',
-                    'imagen_url'  => 'https://cf.bstatic.com/xdata/images/hotel/max1024x768/448971419.jpg?k=3d2bb1cab24e3f17219c630d7d6a1cf36671d765075c7d1f487972a1530832e7&o=&hp=1',
+                    'imagen_url'  => 'https://www.cataloniahotels.com/es/blog/wp-content/uploads/2016/11/catalonia-riviera-maya.jpg',
                 ],
                 'hotel' => ['estrellas' => 5],
                 'habitaciones' => [
@@ -101,7 +101,7 @@ class DatabaseSeeder extends Seeder
                     'ciudad'      => 'Trujillo',
                     'pais'        => 'Perú',
                     'descripcion' => 'Cerca a la playa de Huanchaco y al centro histórico.',
-                    'imagen_url'  => 'https://cf.bstatic.com/xdata/images/hotel/max1024x768/219692318.jpg?k=9f1b51d5b9d3e2b2d9e4e5d3c9f8a111a3c94f0f6b2b3b1a',
+                    'imagen_url'  => 'https://www.turiweb.pe/wp-content/uploads/2021/10/hoteles-071021.jpg',
                 ],
                 'hotel' => ['estrellas' => 4],
                 'habitaciones' => [
@@ -117,7 +117,7 @@ class DatabaseSeeder extends Seeder
                     'ciudad'      => 'Piura',
                     'pais'        => 'Perú',
                     'descripcion' => 'Resort con clima cálido todo el año y piscina.',
-                    'imagen_url'  => 'https://cf.bstatic.com/xdata/images/hotel/max1024x768/122233123.jpg?k=4a2c0a0102030405060708090a0b0c0d',
+                    'imagen_url'  => 'https://www.viajes.cl/hubfs/Vista%20a%C3%A9rea%20del%20hotel%20Belmond%20Miraflores%20Park%20en%20Lima.jpg',
                 ],
                 'hotel' => ['estrellas' => 4],
                 'habitaciones' => [

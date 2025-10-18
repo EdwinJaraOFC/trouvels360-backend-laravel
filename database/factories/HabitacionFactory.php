@@ -13,11 +13,12 @@ class HabitacionFactory extends Factory
     public function definition(): array
     {
         return [
-            'servicio_id'       => Hotel::factory(), // Se asegura que exista el hotel
+            // Se asegura que exista el hotel (y por ende el servicio tipo hotel)
+            'servicio_id'       => Hotel::factory(), 
             'nombre'            => $this->faker->word() . ' Room',
             'capacidad_adultos' => $this->faker->numberBetween(1, 4),
             'capacidad_ninos'   => $this->faker->numberBetween(0, 3),
-            'cantidad'          => $this->faker->numberBetween(1, 20), // habitaciones disponibles
+            'cantidad'          => $this->faker->numberBetween(1, 20),
             'precio_por_noche'  => $this->faker->randomFloat(2, 50, 500),
             'descripcion'       => $this->faker->sentence(8),
         ];

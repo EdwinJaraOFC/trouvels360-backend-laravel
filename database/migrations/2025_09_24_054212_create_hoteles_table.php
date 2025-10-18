@@ -8,19 +8,21 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::create('hoteles', function (Blueprint $table) {
-            // Relación 1:1 con servicios (solo aplica cuando servicios.tipo = 'hotel')
+            // 1:1 con servicios (aplica cuando servicios.tipo='hotel')
             $table->unsignedBigInteger('servicio_id')->primary();
-            $table->string('nombre', 150);
+
             $table->string('direccion', 255);
             $table->unsignedTinyInteger('estrellas')->nullable(); // 1..5
 
-            // FK
             $table->foreign('servicio_id')
                 ->references('id')->on('servicios')
                 ->onDelete('cascade');
 
             $table->timestamps();
         });
+
+        // (Opcional) CHECKs vía DB::statement si tu versión MySQL los soporta
+        // DB::statement('ALTER TABLE hoteles ADD CONSTRAINT chk_estrellas CHECK (estrellas IS NULL OR (estrellas BETWEEN 1 AND 5))');
     }
 
     public function down(): void

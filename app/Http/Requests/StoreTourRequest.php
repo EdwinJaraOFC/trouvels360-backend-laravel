@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreTourRequest extends FormRequest
 {
@@ -12,27 +11,31 @@ class StoreTourRequest extends FormRequest
         return auth()->check() && auth()->user()->rol === 'proveedor';
     }
 
-    protected function prepareForValidation(): void
-    {
-        $this->merge([
-            'categoria'            => $this->categoria ?: null,
-            'duracion_min'         => $this->duracion_min ?: null,
-        ]);
-    }
-
     public function rules(): array
     {
         return [
-            'servicio_id'          => [
-                'required',
-                'integer',
-                // existe en servicios y es de tipo 'tour'
-                Rule::exists('servicios','id')->where(fn($q) => $q->where('tipo','tour')),
-            ],
-            'categoria'            => ['required','in:Gastronomía,Aventura,Cultura,Relajación'],
-            'duracion_min'         => ['nullable','integer','min:1','max:1440'],
-            'precio_persona'       => ['required','numeric','min:0'],
-            'capacidad_por_salida' => ['required','integer','min:1'],
+            // Servicio
+            'nombre'      => ['required', 'string', 'max:150'],
+            'descripcion' => ['nullable', 'string'],
+            'ciudad'      => ['required', 'string', 'max:100'],
+            'pais'        => ['required', 'string', 'max:100'],
+            'imagen_url'  => ['nullable', 'url', 'max:500'],
+            'activo'      => ['boolean'],
+
+            // Tour
+            'categoria'           => ['nullable','in:Gastronomía,Aventura,Cultura,Relajación'],
+            'duracion'            => ['nullable','integer','min:0'],
+            'precio'              => ['required','numeric','min:0'],
+            'cupos'               => ['nullable','integer','min:1'],
+            'fecha'               => ['required','date'], // requerido por la migración actual
+            'cosas_para_llevar'   => ['nullable', 'array'],
+            'cosas_para_llevar.*' => ['string'],
+
+            // Galería (servicio_imagenes)
+            'imagenes'       => ['sometimes','array','max:5'],
+            'imagenes.*'     => ['nullable'],
+            'imagenes.*.url' => ['sometimes','required','url','max:500'],
+            'imagenes.*.alt' => ['sometimes','nullable','string','max:150'],
         ];
     }
 }

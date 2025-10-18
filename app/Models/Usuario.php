@@ -15,14 +15,19 @@ class Usuario extends Authenticatable
 
     protected $table = 'usuarios';
 
-    protected $fillable = ['nombre','apellido','email','password','rol'];
+    // IMPORTANTE: agrega aquí los campos de proveedor cuando migres
+    protected $fillable = [
+        'nombre', 'apellido', 'email', 'password', 'rol',
+        'empresa_nombre', 'telefono', 'ruc', // <-- nuevos (nullable)
+    ];
 
     protected $hidden = ['password','remember_token'];
 
+    // En Laravel 10+ puedes usar este método o la propiedad $casts: ambos sirven
     protected function casts(): array
     {
         return [
-            'password' => 'hashed',
+            'password' => 'hashed',          // hashea automáticamente al asignar
             'email_verified_at' => 'datetime',
         ];
     }
@@ -31,5 +36,12 @@ class Usuario extends Authenticatable
     public function setEmailAttribute(string $value): void
     {
         $this->attributes['email'] = mb_strtolower(trim($value));
+    }
+    
+    // Relación con reviews
+    public function reviews() 
+    {
+        return $this->hasMany(Review::class, 'usuario_id', 'id')
+                ->orderBy('created_at', 'desc');
     }
 }

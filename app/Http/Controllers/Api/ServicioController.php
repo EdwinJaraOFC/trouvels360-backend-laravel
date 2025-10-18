@@ -6,8 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreServicioRequest;
 use App\Http\Requests\UpdateServicioRequest;
 use App\Models\Servicio;
+use App\Models\Habitacion;
+use App\Models\TourSalida;
+use App\Models\ServicioImagen; // 👈 NUEVO
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB; // 👈 NUEVO
 
 class ServicioController extends Controller
 {
@@ -15,11 +19,12 @@ class ServicioController extends Controller
     public function index(Request $request): JsonResponse
     {
         $q = Servicio::query()
-            ->select('id','proveedor_id','nombre','tipo','ciudad','descripcion','imagen_url','activo','created_at');
+            ->select('id','proveedor_id','nombre','tipo','ciudad','pais','descripcion','imagen_url','activo','created_at');
 
         // Filtros básicos
         if ($request->filled('tipo'))   $q->where('tipo', $request->query('tipo'));      // 'hotel' | 'tour'
         if ($request->filled('ciudad')) $q->where('ciudad', $request->query('ciudad'));
+        if ($request->filled('pais'))   $q->where('pais', $request->query('pais'));
         if ($request->filled('activo')) $q->where('activo', filter_var($request->query('activo'), FILTER_VALIDATE_BOOLEAN));
 
         if ($request->filled('q')) {
@@ -43,47 +48,229 @@ class ServicioController extends Controller
         return response()->json($paginator, 200);
     }
 
+    // GET /api/proveedor/servicios (privado - requiere auth)
+    public function indexMine(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $tipo   = $request->query('tipo');   // 'hotel' | 'tour' | null
+        $ciudad = $request->query('ciudad');
+        $pais   = $request->query('pais');
+
+        // Solo filtrar por 'activo' si el parámetro viene en la URL
+        $activo = $request->has('activo')
+            ? filter_var($request->query('activo'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)
+            : null;
+
+        $search = $request->query('search');
+
+        $perPage   = min((int) $request->query('per_page', 15), 100);
+        $sort      = $request->query('sort', '-created_at'); // ej: 'nombre' o '-nombre'
+        $dir       = str_starts_with($sort, '-') ? 'desc' : 'asc';
+        $sortField = ltrim($sort, '-');
+
+        $sortable = ['nombre', 'tipo', 'ciudad', 'pais', 'activo', 'created_at'];
+        if (!in_array($sortField, $sortable, true)) {
+            $sortField = 'created_at';
+        }
+
+        $query = Servicio::query()
+            ->where('proveedor_id', $user->id)
+            ->when($tipo,   fn($q) => $q->where('tipo', $tipo))
+            ->when($ciudad, fn($q) => $q->where('ciudad', $ciudad))
+            ->when($pais,   fn($q) => $q->where('pais', $pais))
+            ->when($activo !== null, fn($q) => $q->where('activo', $activo))
+            ->when($search, fn($q) => $q->where('nombre', 'like', "%{$search}%"));
+
+        // Relaciones + métricas
+        $query->with([
+                // OJO: hoteles no tiene columna 'id' → NO la pidas
+                'hotel:servicio_id,direccion,estrellas',
+                // tours también usa PK = servicio_id; su precio es 'precio'
+                'tour:servicio_id,categoria,fecha,duracion,precio',
+            ])
+            ->withCount([
+                'habitaciones as habitaciones_count',
+                'salidas as salidas_count',
+            ])
+            ->select('servicios.*')
+            ->selectSub(
+                Habitacion::selectRaw('MIN(precio_por_noche)')
+                    ->whereColumn('servicio_id', 'servicios.id'),
+                'tarifa_min_hotel'
+            )
+            ->selectSub(
+                TourSalida::selectRaw('COUNT(*)')
+                    ->whereColumn('servicio_id', 'servicios.id')
+                    ->where('fecha', '>=', now()->toDateString()),
+                'proximas_salidas_count'
+            )
+            ->orderBy($sortField, $dir);
+
+        $servicios = $query->paginate($perPage)->appends($request->query());
+
+        $data = $servicios->getCollection()->map(function ($s) {
+            $base = [
+                'id'          => $s->id,
+                'tipo'        => $s->tipo,
+                'nombre'      => $s->nombre,
+                'descripcion' => $s->descripcion,
+                'ciudad'      => $s->ciudad,
+                'pais'        => $s->pais,
+                'imagen_url'  => $s->imagen_url,
+                'activo'      => (bool) $s->activo,
+                'created_at'  => $s->created_at,
+            ];
+
+            if ($s->tipo === 'hotel') {
+                return $base + [
+                    'meta_tipo' => [
+                        'direccion'           => $s->hotel->direccion ?? null,
+                        'estrellas'           => $s->hotel->estrellas ?? null,
+                        'habitaciones_count'  => $s->habitaciones_count,
+                        'tarifa_min_desde'    => $s->tarifa_min_hotel !== null ? (float) $s->tarifa_min_hotel : null,
+                    ],
+                ];
+            }
+
+            // tipo === 'tour'
+            return $base + [
+                'meta_tipo' => [
+                    'categoria'         => $s->tour->categoria ?? null,
+                    'fecha_base'        => $s->tour->fecha ?? null,      // si mantienes fecha en tours
+                    'duracion'          => $s->tour->duracion ?? null,
+                    'precio'            => isset($s->tour->precio) ? (float) $s->tour->precio : null,
+                    'salidas_count'     => $s->salidas_count,
+                    'proximas_salidas'  => (int) $s->proximas_salidas_count,
+                ],
+            ];
+        });
+
+        return response()->json([
+            'data'  => $data,
+            'meta'  => [
+                'total'        => $servicios->total(),
+                'per_page'     => $servicios->perPage(),
+                'current_page' => $servicios->currentPage(),
+                'last_page'    => $servicios->lastPage(),
+            ],
+            'links' => [
+                'first' => $servicios->url(1),
+                'prev'  => $servicios->previousPageUrl(),
+                'next'  => $servicios->nextPageUrl(),
+                'last'  => $servicios->url($servicios->lastPage()),
+            ],
+        ]);
+    }
+
     // POST /api/servicios
     public function store(StoreServicioRequest $request): JsonResponse
     {
-        $servicio = Servicio::create($request->validated());
+        $data = $request->validated();
+
+        $servicio = DB::transaction(function () use ($data) {
+            // 1) Crear servicio
+            $servicio = Servicio::create($data);
+
+            // 2) Guardar imágenes (si llegan)
+            if (!empty($data['imagenes'])) {
+                $imagenes = collect($data['imagenes'])->take(5)->map(function ($item) {
+                    // item puede ser string (url) o array ['url' => ..., 'alt' => ...]
+                    if (is_string($item)) {
+                        return ['url' => $item, 'alt' => null];
+                    }
+                    return [
+                        'url' => $item['url'] ?? null,
+                        'alt' => $item['alt'] ?? null,
+                    ];
+                })->filter(fn($x) => !empty($x['url']))->values()->all();
+
+                if (!empty($imagenes)) {
+                    $servicio->imagenes()->createMany($imagenes);
+                }
+            }
+
+            return $servicio;
+        });
 
         return response()->json([
             'message' => 'Servicio creado exitosamente.',
-            'data'    => $servicio->only('id','proveedor_id','nombre','tipo','ciudad','activo','created_at'),
+            'data'    => $servicio->only('id','proveedor_id','nombre','tipo','ciudad','pais','activo','created_at'),
         ], 201);
     }
 
     // GET /api/servicios/{servicio}
     public function show(Servicio $servicio): JsonResponse
     {
-        return response()->json(
-            $servicio->only('id','proveedor_id','nombre','tipo','ciudad','descripcion','imagen_url','activo','created_at','updated_at'),
-            200
-        );
+        // 👇 Opcional: incluye galería en la respuesta pública de detalle
+        $servicio->load('imagenes:id,servicio_id,url,alt');
+
+        return response()->json([
+            'id'          => $servicio->id,
+            'proveedor_id'=> $servicio->proveedor_id,
+            'nombre'      => $servicio->nombre,
+            'tipo'        => $servicio->tipo,
+            'ciudad'      => $servicio->ciudad,
+            'pais'        => $servicio->pais,
+            'descripcion' => $servicio->descripcion,
+            'imagen_url'  => $servicio->imagen_url,
+            'activo'      => $servicio->activo,
+            'created_at'  => $servicio->created_at,
+            'updated_at'  => $servicio->updated_at,
+            'imagenes'    => $servicio->imagenes->map(fn($img) => [
+                'url' => $img->url,
+                'alt' => $img->alt,
+            ]),
+        ], 200);
     }
 
     // PUT/PATCH /api/servicios/{servicio}
     public function update(UpdateServicioRequest $request, Servicio $servicio): JsonResponse
     {
-        // (opcional) impedir cambiar 'tipo' tras crear
+        // impedir cambiar 'tipo' tras crear (opcional y ya validado)
         if ($request->filled('tipo') && $request->input('tipo') !== $servicio->tipo) {
             return response()->json(['message' => 'No se permite cambiar el tipo del servicio.'], 422);
         }
 
-        $servicio->update($request->validated());
+        $data = $request->validated();
+
+        DB::transaction(function () use ($servicio, $data) {
+            // 1) Actualizar campos del servicio
+            $servicio->update($data);
+
+            // 2) Si viene 'imagenes', reemplazar la galería completa (estrategia simple)
+            if (array_key_exists('imagenes', $data)) {
+                // borrar actuales y volver a crear
+                $servicio->imagenes()->delete();
+
+                $imagenes = collect($data['imagenes'] ?? [])->take(5)->map(function ($item) {
+                    if (is_string($item)) {
+                        return ['url' => $item, 'alt' => null];
+                    }
+                    return [
+                        'url' => $item['url'] ?? null,
+                        'alt' => $item['alt'] ?? null,
+                    ];
+                })->filter(fn($x) => !empty($x['url']))->values()->all();
+
+                if (!empty($imagenes)) {
+                    $servicio->imagenes()->createMany($imagenes);
+                }
+            }
+        });
+
         $servicio->refresh();
 
         return response()->json([
             'message' => 'Servicio modificado exitosamente.',
-            'data'    => $servicio->only('id','proveedor_id','nombre','tipo','ciudad','activo','updated_at'),
+            'data'    => $servicio->only('id','proveedor_id','nombre','tipo','ciudad','pais','activo','updated_at'),
         ], 200);
     }
 
     // DELETE /api/servicios/{servicio}
     public function destroy(Servicio $servicio): JsonResponse
     {
-        $servicio->delete(); // FKs harán el resto cuando agreguemos tablas hijas
+        $servicio->delete();
         return response()->json(null, 204);
     }
 }

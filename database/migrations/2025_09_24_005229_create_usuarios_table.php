@@ -6,19 +6,36 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /** Crea la tabla 'usuarios' lista para autenticación futura (sin soft delete). */
+    /** Crea la tabla 'usuarios' lista para autenticación y roles viajero/proveedor. */
     public function up(): void
     {
         Schema::create('usuarios', function (Blueprint $table) {
             $table->id();
-            $table->string('nombre', 100);
-            $table->string('apellido', 100);
+
+            // Campos para VIAJERO (personales)
+            $table->string('nombre', 100)->nullable();    // <- nullable para proveedores
+            $table->string('apellido', 100)->nullable();  // <- nullable para proveedores
+
+            // Campos comunes
             $table->string('email', 150)->unique();
-            $table->timestamp('email_verified_at')->nullable(); // verificación de email
-            $table->string('password');                          // hash
-            $table->enum('rol', ['viajero', 'proveedor'])->default('viajero'); // tipo de usuario
-            $table->rememberToken(); // "recuérdame"
-            $table->timestamps();    // created_at / updated_at
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+
+            // Rol
+            $table->enum('rol', ['viajero', 'proveedor'])->default('viajero');
+
+            // Campos para PROVEEDOR
+            $table->string('empresa_nombre', 150)->nullable();
+            $table->string('telefono', 20)->nullable();  // +51 9########
+            $table->string('ruc', 11)->nullable();
+
+            // Índices específicos
+            $table->unique('ruc');
+            $table->index('telefono');
+
+            // Autenticación
+            $table->rememberToken();
+            $table->timestamps();
         });
     }
 

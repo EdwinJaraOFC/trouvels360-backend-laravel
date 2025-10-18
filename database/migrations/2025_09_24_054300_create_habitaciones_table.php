@@ -25,10 +25,21 @@ return new class extends Migration {
 
             $table->timestamps();
 
-            // Índices útiles para búsqueda/filtrado
+            // Evitar duplicados del mismo tipo de habitación en el mismo hotel
+            $table->unique(['servicio_id', 'nombre']);
+
+            // Índices útiles
             $table->index(['servicio_id', 'capacidad_adultos', 'capacidad_ninos']);
-            $table->index('precio_por_noche');
+            $table->index(['servicio_id', 'precio_por_noche']);
         });
+
+        // (Opcional) CHECKs si tu MySQL los aplica
+        // Schema::table('habitaciones', function (Blueprint $table) {
+        //     $table->check('capacidad_adultos >= 1');
+        //     $table->check('capacidad_ninos >= 0');
+        //     $table->check('cantidad > 0');
+        //     $table->check('precio_por_noche >= 0');
+        // });
     }
 
     public function down(): void

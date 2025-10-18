@@ -14,10 +14,11 @@ class Servicio extends Model
     protected $fillable = [
         'proveedor_id',
         'nombre',
-        'tipo',
+        'tipo',          // 'hotel' | 'tour'
         'descripcion',
         'ciudad',
-        'imagen_url',
+        'pais',
+        'imagen_url',    // portada (principal)
         'activo',
     ];
 
@@ -25,48 +26,86 @@ class Servicio extends Model
         'activo' => 'bool',
     ];
 
-    // Relaciones
+    // 🔗 Relaciones principales
     public function proveedor()
     {
         return $this->belongsTo(Usuario::class, 'proveedor_id');
     }
 
-    // Mantén estas relaciones si planeas agregarlas luego
+    // --- Hotel ---
     public function hotel()
     {
-        return $this->hasOne(Hotel::class, 'servicio_id');
+        return $this->hasOne(Hotel::class, 'servicio_id', 'id');
     }
 
-    public function reservas()
+    public function habitaciones()
     {
-        return $this->hasMany(Reserva::class, 'servicio_id');
+        return $this->hasMany(Habitacion::class, 'servicio_id', 'id');
     }
 
-    // Scopes opcionales útiles para el index
+    public function reservasHabitaciones()
+    {
+        return $this->hasManyThrough(
+            ReservaHabitacion::class,
+            Habitacion::class,
+            'servicio_id',   // FK en Habitacion -> Servicio
+            'habitacion_id', // FK en ReservaHabitacion -> Habitacion
+            'id',            // PK en Servicio
+            'id'             // PK en Habitacion
+        );
+    }
+
+    // --- Tour ---
+    public function tour()
+    {
+        return $this->hasOne(Tour::class, 'servicio_id', 'id');
+    }
+
+    public function salidas()
+    {
+        return $this->hasMany(TourSalida::class, 'servicio_id', 'id');
+    }
+
+    public function actividades()
+    {
+        return $this->hasMany(TourActividad::class, 'servicio_id', 'id')
+                    ->orderBy('orden');
+    }
+
+    // --- Imágenes (lista simple 1:N, sin orden ni “portada” marcada) ---
+    public function imagenes()
+    {
+        return $this->hasMany(ServicioImagen::class);
+    }
+
+    // Helper opcional: URL de portada (usa imagen_url del servicio)
+    public function getPortadaUrlAttribute(): ?string
+    {
+        return $this->imagen_url;
+    }
+
+    // 🔎 Scopes
     public function scopeActivos($query)
     {
         return $query->where('activo', true);
     }
 
-    public function scopePorCiudadYTipo($query, ?string $ciudad = null, ?string $tipo = null)
+    public function scopePorDestino($query, ?string $pais = null, ?string $ciudad = null)
     {
         return $query
-            ->when($ciudad, fn($q) => $q->where('ciudad', $ciudad))
-            ->when($tipo, fn($q) => $q->where('tipo', $tipo));
+            ->when($pais,   fn($q) => $q->where('pais', $pais))
+            ->when($ciudad, fn($q) => $q->where('ciudad', $ciudad));
     }
 
-    public function tour()
+    public function scopePorTipo($query, ?string $tipo = null)
     {
-        return $this->hasOne(Tour::class, 'servicio_id');
+        return $query->when($tipo, fn($q) => $q->where('tipo', $tipo));
     }
 
-    public function salidas()
+    // Reviews
+    public function reviews()
     {
-        return $this->hasMany(TourSalida::class, 'servicio_id');
-    }
-
-    public function actividades()
-    {
-        return $this->hasMany(TourActividad::class, 'servicio_id')->orderBy('orden');
+        return $this->hasMany(Review::class, 'servicio_id', 'id')
+                ->orderBy('created_at', 'desc');
     }
 }

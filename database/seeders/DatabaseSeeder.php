@@ -3,10 +3,10 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Carbon\Carbon;
 
 use App\Models\Usuario;
 use App\Models\Servicio;
-// use App\Models\ServicioImagen; // ← ya no se usa directamente
 use App\Models\Hotel;
 use App\Models\Habitacion;
 use App\Models\ReservaHabitacion;
@@ -97,7 +97,7 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($hotelesConfig as $cfg) {
-            // 1) Servicio tipo hotel (el factory completará a 5 imágenes automáticamente)
+            // 1) Servicio tipo hotel
             $servicio = Servicio::factory()->create([
                 'proveedor_id' => $proveedor->id,
                 'nombre'       => $cfg['servicio']['nombre'],
@@ -105,7 +105,7 @@ class DatabaseSeeder extends Seeder
                 'ciudad'       => $cfg['servicio']['ciudad'],
                 'pais'         => $cfg['servicio']['pais'],
                 'descripcion'  => $cfg['servicio']['descripcion'],
-                'imagen_url'   => $cfg['servicio']['imagen_url'], // portada
+                'imagen_url'   => $cfg['servicio']['imagen_url'],
                 'activo'       => true,
             ]);
 
@@ -134,38 +134,74 @@ class DatabaseSeeder extends Seeder
         }
 
         // ---------------------------------------------------------
-        // Servicios adicionales (mezcla hotel/tour) → el factory completa a 5 imágenes
+        // Servicios adicionales (mezcla hotel/tour) – el factory completa imágenes
         // ---------------------------------------------------------
         Servicio::factory()
             ->count(10)
             ->create();
 
         // ---------------------------------------------------------
-        // TOUR PACK: 1 tour con salidas, actividades, reservas
-        // (el servicio del tour también quedará con 5 imágenes por el factory)
+        // TOUR PACK: 1 tour con salidas, actividades, reservas (demo)
         // ---------------------------------------------------------
         $tour = Tour::factory()->create();
 
-        // Salidas del tour
+        // Salidas del tour “manual”
         TourSalida::factory()->count(3)->create([
             'servicio_id' => $tour->servicio_id,
         ]);
 
-        // Actividades del tour ordenadas
+        // Actividades ordenadas
         for ($i = 1; $i <= 4; $i++) {
             TourActividad::factory()->orden($i)->create([
                 'servicio_id' => $tour->servicio_id,
             ]);
         }
 
-        // Reservas de tour ligadas a salidas recientes
+        // Reservas de tour ligadas a salidas recientes (demo)
         TourSalida::factory()->count(2)->create()->each(function ($salida) {
             ReservaTour::factory()->count(3)->create([
                 'salida_id' => $salida->id,
             ]);
         });
 
-        // -------Reviews-------------
+        // ---------------------------------------------------------
+        // 💡 NUEVO: Crear salidas para *todos* los tours existentes
+        // (solo si aún no tienen)
+        // ---------------------------------------------------------
+        $tours = Tour::query()->get();
+
+        foreach ($tours as $t) {
+            $servicioId = $t->servicio_id;
+            $capacidad  = $t->capacidad_por_salida ?? 20;
+
+            // Evitar duplicados si el tour ya tiene salidas
+            $yaTiene = TourSalida::where('servicio_id', $servicioId)->exists();
+            if ($yaTiene) {
+                continue;
+            }
+
+            // 4 salidas semanales a partir de +3 días
+            $base = Carbon::now()->addDays(3);
+            $fechas = [
+                $base->copy(),
+                $base->copy()->addDays(7),
+                $base->copy()->addDays(14),
+                $base->copy()->addDays(21),
+            ];
+
+            foreach ($fechas as $f) {
+                TourSalida::create([
+                    'servicio_id'    => $servicioId,
+                    'fecha'          => $f->format('Y-m-d'),
+                    'hora'           => $f->setTime(rand(8, 15), [0, 30][rand(0,1)])->format('H:i:00'),
+                    'cupo_total'     => $capacidad,
+                    'cupo_reservado' => 0,
+                    'estado'         => 'programada',
+                ]);
+            }
+        }
+
+        // ------- Reviews -------------
         $usuarioIds = Usuario::pluck('id');
 
         Servicio::all()->each(function ($servicio) use ($usuarioIds) {

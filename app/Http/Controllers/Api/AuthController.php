@@ -75,7 +75,7 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Login exitoso.',
             'token'   => $token,
-            'user'    => $user->only('id','nombre','apellido','email','rol','created_at'),
+            'user'    => $user->only('id','nombre','apellido','email','rol','empresa_nombre','created_at'),
         ], 200);
     }
 
@@ -85,7 +85,7 @@ class AuthController extends Controller
         $u = $request->user();
 
         return response()->json([
-            'data' => $u->only('id','nombre','apellido','email','rol','created_at','updated_at'),
+            'data' => $u->only('id','nombre','apellido','email','rol','empresa_nombre','telefono','ruc','created_at','updated_at'),
         ], 200);
     }
 

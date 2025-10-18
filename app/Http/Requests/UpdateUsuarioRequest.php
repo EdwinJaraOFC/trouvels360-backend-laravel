@@ -16,30 +16,28 @@ class UpdateUsuarioRequest extends FormRequest
     {
         $data = $this->all();
 
-        // Modelo enlazado por la ruta (Usuario $usuario)
-        $usuario = $this->route('usuario');
+        // 🔧 Soporta /usuarios/{usuario} y /usuarios/me
+        $usuario = $this->route('usuario') ?? $this->user();
         $currentRole = $usuario?->rol;
 
-        // Normaliza y elimina strings vacíos para que 'sometimes' funcione bien
+        // Normaliza y elimina strings vacíos
         $normalize = function($key, $val) {
             if (is_string($val)) $val = trim($val);
             if ($val === '' || $val === null) return [false, null];
 
             if ($key === 'email')      return [true, mb_strtolower($val)];
-            if ($key === 'ruc')        return [true, preg_replace('/\D/', '', (string)$val)]; // solo dígitos
-            if ($key === 'telefono')   return [true, $val]; // formato se valida por regex
+            if ($key === 'ruc')        return [true, preg_replace('/\D/', '', (string)$val)];
+            if ($key === 'telefono')   return [true, $val];
             if (in_array($key, ['empresa_nombre','nombre','apellido'], true)) return [true, $val];
 
             return [true, $val];
         };
 
         foreach (array_keys($data) as $k) {
-            // Nunca permitimos cambiar 'rol' via update()
-            if ($k === 'rol') {
+            if ($k === 'rol') { // Nunca permitir cambiar rol
                 unset($data[$k]);
                 continue;
             }
-
             [$keep, $v] = $normalize($k, $data[$k]);
             if (!$keep) {
                 unset($data[$k]);
@@ -48,7 +46,7 @@ class UpdateUsuarioRequest extends FormRequest
             }
         }
 
-        // Si el usuario es 'viajero', ignoramos silenciosamente campos exclusivos de proveedor
+        // Si es viajero, ignora silenciosamente campos de proveedor
         if ($currentRole === 'viajero') {
             unset($data['empresa_nombre'], $data['telefono'], $data['ruc']);
         }
@@ -58,13 +56,13 @@ class UpdateUsuarioRequest extends FormRequest
 
     public function rules(): array
     {
-        $usuario = $this->route('usuario');   // Usuario actual (model binding)
+        // 🔧 Soporta /usuarios/{usuario} y /usuarios/me
+        $usuario = $this->route('usuario') ?? $this->user();
         $id      = $usuario?->id;
-        $role    = $usuario?->rol;            // rol actual en BD
+        $role    = $usuario?->rol;
 
-        // Regla explícita para bloquear 'rol' si llega por algún motivo
         $rules = [
-            'rol'       => ['prohibited'], // <- NO se permite cambiar rol
+            'rol'       => ['prohibited'],
 
             'nombre'    => ['sometimes','string','max:100'],
             'apellido'  => ['sometimes','string','max:100'],
@@ -72,17 +70,14 @@ class UpdateUsuarioRequest extends FormRequest
             'password'  => ['sometimes','string','min:6'],
         ];
 
-        // Si es proveedor, puede actualizar sus campos con validaciones específicas
         if ($role === 'proveedor') {
             $rules = array_merge($rules, [
                 'empresa_nombre' => ['sometimes','string','max:150'],
-                // +51, espacio opcional, luego 9 y 8 dígitos
+                // mismo patrón que usas en el front: +51 9########
                 'telefono'       => ['sometimes','string','regex:/^\+51\s?9\d{8}$/','max:15'],
                 'ruc'            => ['sometimes','string','size:11','regex:/^\d{11}$/', Rule::unique('usuarios','ruc')->ignore($id)],
             ]);
         }
-
-        // Si es viajero, esos campos ya se eliminan en prepareForValidation(), así que no hace falta regla
 
         return $rules;
     }

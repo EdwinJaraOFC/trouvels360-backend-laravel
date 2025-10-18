@@ -50,11 +50,11 @@ class DatabaseSeeder extends Seeder
         $hotelesConfig = [
             [
                 'servicio' => [
-                    'nombre'      => 'Hotel Cayetano',
+                    'nombre'      => 'Hotel La Hacienda',
                     'ciudad'      => 'Lima',
                     'pais'        => 'Perú',
                     'descripcion' => 'Un hotel de prueba para el seeder en Lima.',
-                    'imagen_url'  => 'https://picsum.photos/seed/hotel-cayetano/640/480',
+                    'imagen_url'  => 'https://image-tc.galaxy.tf/wijpeg-3ccyhqat2arc8mjzjlbe07ac7/miraflores.jpg?rotate=0&crop=0%2C148%2C632%2C606&width=1920',
                 ],
                 'hotel' => ['estrellas' => 4],
                 'habitaciones' => [
@@ -70,7 +70,7 @@ class DatabaseSeeder extends Seeder
                     'ciudad'      => 'Cusco',
                     'pais'        => 'Perú',
                     'descripcion' => 'Boutique acogedor cerca del centro histórico.',
-                    'imagen_url'  => 'https://picsum.photos/seed/andes-boutique/640/480',
+                    'imagen_url'  => 'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/06/a1/51/71/best-western-los-andes.jpg?w=900&h=500&s=1',
                 ],
                 'hotel' => ['estrellas' => 3],
                 'habitaciones' => [
@@ -85,7 +85,7 @@ class DatabaseSeeder extends Seeder
                     'ciudad'      => 'Arequipa',
                     'pais'        => 'Perú',
                     'descripcion' => 'Hotel con piscina y vista al Misti.',
-                    'imagen_url'  => 'https://picsum.photos/seed/costa-sol-arequipa/640/480',
+                    'imagen_url'  => 'https://cf.bstatic.com/xdata/images/hotel/max1024x768/448971419.jpg?k=3d2bb1cab24e3f17219c630d7d6a1cf36671d765075c7d1f487972a1530832e7&o=&hp=1',
                 ],
                 'hotel' => ['estrellas' => 5],
                 'habitaciones' => [

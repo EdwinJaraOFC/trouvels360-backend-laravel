@@ -15,7 +15,7 @@ class ServicioFactory extends Factory
     private static array $hotelImgs = [
         'https://media-cdn.tripadvisor.com/media/photo-s/06/ee/c7/e2/hotel-valdivia.jpg',
         'https://royalparkhotel.com.pe/wp-content/uploads/2016/06/hotel-de-5-estrellas-en-peru.jpg',
-        'https://cf.bstatic.com/xdata/images/hotel/max1024x768/100153499.jpg?k=61d78fd618295debcc47b78ba6bdbb80fa3f8e88d09d5a486f516bd16aeaa14b&o=&hp=1',
+        'https://www.cataloniahotels.com/es/blog/wp-content/uploads/2016/11/catalonia-riviera-maya.jpg',
         'https://www.incatrilogytours.com/wp-content/uploads/2024/03/hotel-lujoso-cusco-cartagena2.jpg',
         'https://www.turiweb.pe/wp-content/uploads/2021/10/hoteles-071021.jpg',
         'https://www.viajes.cl/hubfs/Vista%20a%C3%A9rea%20del%20hotel%20Belmond%20Miraflores%20Park%20en%20Lima.jpg',

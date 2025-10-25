@@ -78,7 +78,12 @@ class TourController extends Controller
             'tour',
             'imagenes:id,servicio_id,url,alt',  // 👈 incluir galería simple
             'actividades',
-            'salidas' => fn($q) => $q->where('estado','programada')->orderBy('fecha')->orderBy('hora')
+            'salidas' => fn($q) => $q->where('estado','programada')->orderBy('fecha')->orderBy('hora'),
+            'reviews' => function ($q) {
+                $q->with('usuario:id,nombre,apellido')
+                  ->latest()
+                  ->limit(10); // Últimas 10 reviews
+            }
         ])->where('tipo','tour')->findOrFail($tour);
 
         // Filtrar por cupos si se envía
@@ -87,7 +92,36 @@ class TourController extends Controller
             $serv->salidas = $serv->salidas->filter(fn($s) => ($s->cupo_total - $s->cupo_reservado) >= $cupos);
         }
 
-        return response()->json(['servicio' => $serv]);
+        // Calcular estadísticas de reviews
+        $promedioCalificacion = $serv->promedio_calificacion;
+        $cantidadReviews = $serv->cantidad_reviews;
+
+        // Formatear reviews
+        $reviewsFormateadas = $serv->reviews->map(fn($r) => [
+            'id' => $r->id,
+            'usuario' => [
+                'id' => $r->usuario_id,
+                'nombre' => $r->usuario?->nombre,
+                'apellido' => $r->usuario?->apellido,
+                'nombre_completo' => $r->usuario 
+                    ? trim(($r->usuario->nombre ?? '') . ' ' . ($r->usuario->apellido ?? '')) ?: 'Usuario Anónimo'
+                    : 'Usuario Anónimo',
+            ],
+            'comentario' => $r->comentario,
+            'calificacion' => (int) $r->calificacion,
+            'created_at' => $r->created_at?->toISOString(),
+            'fecha_formateada' => $r->created_at?->locale('es')->diffForHumans(),
+        ]);
+
+        // Construir respuesta
+        $data = $serv->toArray();
+        $data['calificacion'] = [
+            'promedio' => $promedioCalificacion,
+            'cantidad' => $cantidadReviews,
+        ];
+        $data['reviews'] = $reviewsFormateadas;
+
+        return response()->json(['servicio' => $data]);
     }
 
     /** POST /api/tours  (crea servicio + tour) */

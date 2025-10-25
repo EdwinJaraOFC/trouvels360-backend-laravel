@@ -180,12 +180,22 @@ class HotelController extends Controller
     public function show(int $servicio_id): JsonResponse
     {
         $hotel = Hotel::with([
-            'servicio:id,nombre,ciudad,pais,imagen_url',
+            'servicio:id,nombre,ciudad,pais,imagen_url,descripcion',
             'servicio.imagenes:id,servicio_id,url,alt',
+            'servicio.reviews' => function ($q) {
+                $q->with('usuario:id,nombre,apellido')
+                  ->latest()
+                  ->limit(10); // Últimas 10 reviews
+            },
             'habitaciones'
         ])->find($servicio_id);
 
         if (!$hotel) return response()->json(['message' => 'Hotel no encontrado'], 404);
+
+        // Calcular estadísticas de reviews
+        $servicio = $hotel->servicio;
+        $promedioCalificacion = $servicio->promedio_calificacion;
+        $cantidadReviews = $servicio->cantidad_reviews;
 
         return response()->json([
             'hotel' => [
@@ -194,14 +204,19 @@ class HotelController extends Controller
                 'estrellas'   => $hotel->estrellas,
                 'created_at'  => $hotel->created_at,
                 'updated_at'  => $hotel->updated_at,
-                'nombre'      => $hotel->servicio->nombre ?? null,
-                'ciudad'      => $hotel->servicio->ciudad ?? null,
-                'pais'        => $hotel->servicio->pais ?? null,
-                'imagen_url'  => $hotel->servicio->imagen_url,
-                'imagenes'    => $hotel->servicio->imagenes->map(fn($img) => [
+                'nombre'      => $servicio->nombre ?? null,
+                'descripcion' => $servicio->descripcion ?? null,
+                'ciudad'      => $servicio->ciudad ?? null,
+                'pais'        => $servicio->pais ?? null,
+                'imagen_url'  => $servicio->imagen_url,
+                'imagenes'    => $servicio->imagenes->map(fn($img) => [
                     'url' => $img->url,
                     'alt' => $img->alt,
                 ]),
+                'calificacion' => [
+                    'promedio' => $promedioCalificacion,
+                    'cantidad' => $cantidadReviews,
+                ],
             ],
             'habitaciones'=> $hotel->habitaciones->map(fn($h) => [
                 'id'                 => $h->id,
@@ -210,6 +225,21 @@ class HotelController extends Controller
                 'capacidad_ninos'    => (int) $h->capacidad_ninos,
                 'cantidad'           => (int) $h->cantidad,
                 'precio_por_noche'   => (float) $h->precio_por_noche,
+            ]),
+            'reviews' => $servicio->reviews->map(fn($r) => [
+                'id' => $r->id,
+                'usuario' => [
+                    'id' => $r->usuario_id,
+                    'nombre' => $r->usuario?->nombre,
+                    'apellido' => $r->usuario?->apellido,
+                    'nombre_completo' => $r->usuario 
+                        ? trim(($r->usuario->nombre ?? '') . ' ' . ($r->usuario->apellido ?? '')) ?: 'Usuario Anónimo'
+                        : 'Usuario Anónimo',
+                ],
+                'comentario' => $r->comentario,
+                'calificacion' => (int) $r->calificacion,
+                'created_at' => $r->created_at?->toISOString(),
+                'fecha_formateada' => $r->created_at?->locale('es')->diffForHumans(),
             ]),
         ], 200);
     }

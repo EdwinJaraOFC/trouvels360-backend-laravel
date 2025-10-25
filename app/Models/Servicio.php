@@ -108,4 +108,23 @@ class Servicio extends Model
         return $this->hasMany(Review::class, 'servicio_id', 'id')
                 ->orderBy('created_at', 'desc');
     }
+
+    // 📊 Accessors para calificaciones
+    
+    /**
+     * Obtiene el promedio de calificaciones del servicio
+     */
+    public function getPromedioCalificacionAttribute(): ?float
+    {
+        $promedio = $this->reviews()->avg('calificacion');
+        return $promedio ? round($promedio, 1) : null;
+    }
+
+    /**
+     * Obtiene la cantidad total de reviews del servicio
+     */
+    public function getCantidadReviewsAttribute(): int
+    {
+        return $this->reviews()->count();
+    }
 }

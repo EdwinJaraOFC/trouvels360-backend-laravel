@@ -5,29 +5,28 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-// Si NO usarás Sanctum aún, puedes quitar HasApiTokens:
+// Mantener por ahora; se quitará cuando apaguemos Sanctum
 use Laravel\Sanctum\HasApiTokens;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
 /** Modelo 'usuarios' listo para login futuro (sin soft delete). */
-class Usuario extends Authenticatable
+class Usuario extends Authenticatable implements JWTSubject
 {
     use HasApiTokens, Notifiable, HasFactory;
 
     protected $table = 'usuarios';
 
-    // IMPORTANTE: agrega aquí los campos de proveedor cuando migres
     protected $fillable = [
         'nombre', 'apellido', 'email', 'password', 'rol',
-        'empresa_nombre', 'telefono', 'ruc', // <-- nuevos (nullable)
+        'empresa_nombre', 'telefono', 'ruc',
     ];
 
     protected $hidden = ['password','remember_token'];
 
-    // En Laravel 10+ puedes usar este método o la propiedad $casts: ambos sirven
     protected function casts(): array
     {
         return [
-            'password' => 'hashed',          // hashea automáticamente al asignar
+            'password' => 'hashed',
             'email_verified_at' => 'datetime',
         ];
     }
@@ -37,11 +36,25 @@ class Usuario extends Authenticatable
     {
         $this->attributes['email'] = mb_strtolower(trim($value));
     }
-    
+
     // Relación con reviews
-    public function reviews() 
+    public function reviews()
     {
         return $this->hasMany(Review::class, 'usuario_id', 'id')
-                ->orderBy('created_at', 'desc');
+                    ->orderBy('created_at', 'desc');
+    }
+
+    // ==== JWTSubject ====
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims(): array
+    {
+        return [
+            'rol' => $this->rol ?? null,
+            'email' => $this->email ?? null,
+        ];
     }
 }

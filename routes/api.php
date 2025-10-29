@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\TourSalidaController;
 use App\Http\Controllers\Api\TourActividadController;
 use App\Http\Controllers\Api\ReservaTourController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\JwtAuthController;
 
 // Healthcheck
 Route::get('ping', fn () => response()->json(['pong' => true]));
@@ -121,4 +122,31 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('reviews/{review}', [ReviewController::class, 'update']);
     Route::patch('reviews/{review}', [ReviewController::class, 'update']);
     Route::delete('reviews/{review}', [ReviewController::class, 'destroy']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| JWT (migración temporal) — prefijo /auth2
+| - CSRF double-submit: POST/PUT/PATCH/DELETE llevan middleware('csrf.api')
+| - jwt.cookie: inyecta Authorization: Bearer <desde cookie HttpOnly>
+| - auth:api: usa el guard JWT configurado en config/auth.php
+|--------------------------------------------------------------------------
+*/
+Route::prefix('auth2')->group(function () {
+    // 1) CSRF
+    Route::get('/csrf', [JwtAuthController::class, 'csrf']);
+
+    // 2) Login (setea cookie HttpOnly access_token) — requiere CSRF
+    Route::post('/login', [JwtAuthController::class, 'login'])
+        ->middleware(['csrf.api','throttle:6,1']);
+
+    // 3) Refresh — DEBE ir fuera de auth:api (acepta token expirado dentro de refresh_ttl)
+    Route::post('/refresh', [JwtAuthController::class, 'refresh'])
+        ->middleware(['jwt.cookie','csrf.api']);
+
+    // 4) Rutas protegidas por JWT vigente
+    Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
+        Route::get('/me', [JwtAuthController::class, 'me']);
+        Route::post('/logout', [JwtAuthController::class, 'logout'])->middleware('csrf.api');
+    });
 });

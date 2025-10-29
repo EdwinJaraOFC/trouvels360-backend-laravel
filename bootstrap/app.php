@@ -11,8 +11,12 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
-        //
+    ->withMiddleware(function (Middleware $middleware) {
+        // 👇 registra tu middleware personalizado
+        $middleware->alias([
+            'jwt.cookie' => \App\Http\Middleware\AttachJwtFromCookie::class,
+            'csrf.api'   => \App\Http\Middleware\VerifyApiCsrf::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

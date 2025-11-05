@@ -5,43 +5,72 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-// Si NO usarás Sanctum aún, puedes quitar HasApiTokens:
-use Laravel\Sanctum\HasApiTokens;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-/** Modelo 'usuarios' listo para login futuro (sin soft delete). */
-class Usuario extends Authenticatable
+/**
+ * Modelo 'usuarios' — Autenticación con JWT (sin Sanctum)
+ */
+class Usuario extends Authenticatable implements JWTSubject
 {
-    use HasApiTokens, Notifiable, HasFactory;
+    use Notifiable, HasFactory; // 🔹 Eliminamos HasApiTokens (Sanctum)
 
     protected $table = 'usuarios';
 
-    // IMPORTANTE: agrega aquí los campos de proveedor cuando migres
     protected $fillable = [
         'nombre', 'apellido', 'email', 'password', 'rol',
-        'empresa_nombre', 'telefono', 'ruc', // <-- nuevos (nullable)
+        'empresa_nombre', 'telefono', 'ruc',
     ];
 
-    protected $hidden = ['password','remember_token'];
+    protected $hidden = ['password', 'remember_token'];
 
-    // En Laravel 10+ puedes usar este método o la propiedad $casts: ambos sirven
+    /**
+     * Casts automáticos de atributos
+     */
     protected function casts(): array
     {
         return [
-            'password' => 'hashed',          // hashea automáticamente al asignar
+            'password' => 'hashed',          // Hash automático al asignar
             'email_verified_at' => 'datetime',
         ];
     }
 
-    // Normaliza email antes de guardar
+    /**
+     * Normaliza el email antes de guardar
+     */
     public function setEmailAttribute(string $value): void
     {
         $this->attributes['email'] = mb_strtolower(trim($value));
     }
-    
-    // Relación con reviews
-    public function reviews() 
+
+    /**
+     * Relación con reseñas (reviews)
+     */
+    public function reviews()
     {
         return $this->hasMany(Review::class, 'usuario_id', 'id')
-                ->orderBy('created_at', 'desc');
+                    ->orderBy('created_at', 'desc');
+    }
+
+    // ------------------------------------------------------
+    // JWTSubject — Métodos requeridos por tymon/jwt-auth
+    // ------------------------------------------------------
+
+    /**
+     * Devuelve el identificador (clave primaria del usuario)
+     */
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    /**
+     * Agrega datos personalizados al payload del JWT
+     */
+    public function getJWTCustomClaims(): array
+    {
+        return [
+            'rol'   => $this->rol ?? null,
+            'email' => $this->email ?? null,
+        ];
     }
 }

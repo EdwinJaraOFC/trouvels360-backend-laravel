@@ -4,6 +4,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Composer dependencies (se instalarán en el contenedor)
+vendor/
+composer.lock
+
 # Laravel cache y logs
 storage/logs/*
 storage/framework/cache/*

@@ -1,7 +1,6 @@
 FROM php:8.2-apache
 
 # Dependencias del sistema y extensiones PHP
-
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -13,40 +12,53 @@ RUN apt-get update && apt-get install -y \
     unzip \
     nodejs \
     npm \
-  && docker-php-ext-configure zip \
-  && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
-  && rm -rf /var/lib/apt/lists/*
+    && docker-php-ext-configure zip \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip \
+    && rm -rf /var/lib/apt/lists/*
 
-# Instalar Composer (desde imagen oficial ligera)
+# Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Habilitar mod_rewrite (URLs limpias Laravel)
+# Habilitar mod_rewrite
 RUN a2enmod rewrite
 
-# Configurar DocumentRoot para que apunte a /public
+# Configurar Apache para evitar advertencias
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+
+# Configurar DocumentRoot
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 WORKDIR /var/www/html
 
-#### Dependencias Composer (aprovecha cache si solo cambia código)
-
+# Copiar archivos de dependencias primero (para cache de Docker)
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --prefer-dist --optimize-autoloader --no-scripts \
     && rm -rf /root/.composer/cache
 
+# Copiar el resto del código
 COPY . .
+
+# Configurar permisos
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# Variables útiles para runtime (no secretas)
+# NO ejecutar comandos de artisan aquí - se harán en runtime
+# Crear .env desde .env.example si no existe
+RUN if [ ! -f .env ]; then cp .env.example .env; fi
+
+# Copiar script de inicialización
+COPY scripts/railway-deploy.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/railway-deploy.sh
+
+# Variables para PHP
 ENV PHP_OPCACHE_VALIDATE_TIMESTAMPS=1 \
     PHP_OPCACHE_MAX_ACCELERATED_FILES=10000 \
     PHP_OPCACHE_MEMORY_CONSUMPTION=128 \
     PHP_OPCACHE_INTERNED_STRINGS_BUFFER=16
 
-# Exponer puerto HTTP
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+# Usar el script de inicialización
+ENTRYPOINT ["/usr/local/bin/railway-deploy.sh"]

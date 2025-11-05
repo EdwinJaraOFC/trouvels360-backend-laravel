@@ -15,13 +15,12 @@ docker compose version  # opcional
 
 ### Windows (PowerShell)
 ```powershell
-cd C:\xampp\htdocs\laravel\trouvels360-backend-laravel
 
 docker-compose up --build -d
 
 docker-compose exec app composer install
 
-bash scripts/dev-init.sh --seed             
+bash scripts/dev-init.sh --fresh             
 ```
 
 ### Linux / macOS / Git Bash / WSL
@@ -32,7 +31,7 @@ docker-compose up --build -d
 
 docker-compose exec app composer install
 
-bash scripts/dev-init.sh --seed      
+bash scripts/dev-init.sh --fresh      
 ```
 
 Verifica acceso:
@@ -82,13 +81,13 @@ bash scripts/dev-init.sh    # solo migraciones (genera APP_KEY si falta)
 ```
 trouvels360-backend-laravel/
 ├── docker-compose.yml           # Orquestación
-├── Dockerfile                   # Imagen PHP 8.2 + Apache
-├── .env.docker.example          # Plantilla de variables
+├── Dockerfile                   # Imagen PHP 8.2 + Apache (desarrollo)
+├── .env                         # Variables de entorno (copia de .env.example)
 ├── scripts/
-│   └── dev-init.sh              # Helper manual
+│   └── dev-init.sh              # Helper para inicialización
 └── docker/
     └── apache/
-        └── 000-default.conf     # VirtualHost
+        └── 000-default.conf     # Configuración de VirtualHost Apache
 ```
 
 ---

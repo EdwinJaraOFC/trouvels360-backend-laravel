@@ -21,25 +21,31 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // --- Usuarios fijos ---
-        $proveedor = Usuario::factory()->proveedor()->create([
-            'nombre'          => null,
-            'apellido'        => null,
-            'empresa_nombre'  => 'Edwin Proveedor SAC',
-            'telefono'        => '+51 9' . fake()->numerify('########'),
-            'ruc'             => (string) fake()->numerify('2##########'),
-            'email'           => 'edwinproveedor@gmail.com',
-            'password'        => 'proveedor',
-        ]);
+        $proveedor = Usuario::firstOrCreate(
+            ['email' => 'edwinproveedor@gmail.com'],
+            [
+                'nombre'          => null,
+                'apellido'        => null,
+                'empresa_nombre'  => 'Edwin Proveedor SAC',
+                'telefono'        => '+51 9' . fake()->numerify('########'),
+                'ruc'             => (string) fake()->numerify('2##########'),
+                'password'        => 'proveedor',
+                'rol'             => 'proveedor',
+            ]
+        );
 
-        Usuario::factory()->viajero()->create([
-            'nombre'          => 'Edwin',
-            'apellido'        => 'Viajero',
-            'empresa_nombre'  => null,
-            'telefono'        => null,
-            'ruc'             => null,
-            'email'           => 'edwinviajero@gmail.com',
-            'password'        => 'viajero',
-        ]);
+        Usuario::firstOrCreate(
+            ['email' => 'edwinviajero@gmail.com'],
+            [
+                'nombre'          => 'Edwin',
+                'apellido'        => 'Viajero',
+                'empresa_nombre'  => null,
+                'telefono'        => null,
+                'ruc'             => null,
+                'password'        => 'viajero',
+                'rol'             => 'viajero',
+            ]
+        );
 
         Usuario::factory()->viajero()->count(5)->create();
         Usuario::factory()->proveedor()->count(5)->create();

@@ -32,33 +32,12 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
 
 WORKDIR /var/www/html
 
-# Copiar archivos de dependencias primero (para cache de Docker)
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --prefer-dist --optimize-autoloader --no-scripts \
-    && rm -rf /root/.composer/cache
-
-# Copiar el resto del código
-COPY . .
-
-# Configurar permisos
-RUN chown -R www-data:www-data storage bootstrap/cache \
+# Configurar permisos iniciales (los directorios storage y bootstrap/cache se crean con el volumen)
+RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
-
-# NO ejecutar comandos de artisan aquí - se harán en runtime
-# Crear .env desde .env.example si no existe
-RUN if [ ! -f .env ]; then cp .env.example .env; fi
-
-# Copiar script de inicialización
-COPY scripts/railway-deploy.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/railway-deploy.sh
-
-# Variables para PHP
-ENV PHP_OPCACHE_VALIDATE_TIMESTAMPS=1 \
-    PHP_OPCACHE_MAX_ACCELERATED_FILES=10000 \
-    PHP_OPCACHE_MEMORY_CONSUMPTION=128 \
-    PHP_OPCACHE_INTERNED_STRINGS_BUFFER=16
 
 EXPOSE 80
 
-# Usar el script de inicialización
-ENTRYPOINT ["/usr/local/bin/railway-deploy.sh"]
+# Iniciar Apache en foreground (modo desarrollo simple)
+CMD ["apache2-foreground"]

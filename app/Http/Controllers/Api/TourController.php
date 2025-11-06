@@ -31,8 +31,15 @@ class TourController extends Controller
                    ->orWhere('pais','like',"%$term%");
             });
         }
-        if ($req->filled('ciudad'))       $q->where('ciudad', $req->query('ciudad'));
-        if ($req->filled('pais'))         $q->where('pais', $req->query('pais'));
+        // Filtro por ciudad o pais
+        if ($req->filled('destino')) {
+            $destino = $req->query('destino');
+            $q->where(function ($query) use ($destino) {
+                $query->where('ciudad', 'like', "%{$destino}%")
+                    ->orWhere('pais', 'like', "%{$destino}%");
+            });
+        }
+
         if ($req->filled('proveedor_id')) $q->where('proveedor_id', $req->query('proveedor_id'));
         if ($req->has('activo'))          $q->where('activo', filter_var($req->query('activo'), FILTER_VALIDATE_BOOLEAN));
 
@@ -89,11 +96,16 @@ class TourController extends Controller
             }
         ])->where('tipo','tour')->findOrFail($tour);
 
-        // Filtrar por cupos si se envía
-        if ($req->filled('cupos')) {
-            $cupos = (int) $req->query('cupos', 1);
-            $serv->salidas = $serv->salidas->filter(fn($s) => ($s->cupo_total - $s->cupo_reservado) >= $cupos);
-        }
+        // FILTRO POR FECHAS Y CUPOS
+        $fechaInicio = $req->query('checkIn');
+        $fechaFin    = $req->query('checkOut', $fechaInicio);
+        $cupos       = (int) $req->query('cupos', 1);
+
+        $serv->salidas = $serv->salidas->filter(fn($s) => 
+            $s->estado === 'programada' &&
+            (!$fechaInicio || ($s->fecha >= $fechaInicio && $s->fecha <= $fechaFin)) &&
+            ($s->cupo_total - $s->cupo_reservado) >= $cupos
+        );
 
         // Calcular estadísticas de reviews
         $promedioCalificacion = $serv->promedio_calificacion;

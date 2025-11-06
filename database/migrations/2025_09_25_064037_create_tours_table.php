@@ -11,7 +11,6 @@ return new class extends Migration {
         Schema::create('tours', function (Blueprint $table) {
             $table->unsignedBigInteger('servicio_id')->primary(); // PK = FK a servicios.id
             $table->enum('categoria', ['Gastronomía','Aventura','Cultura','Relajación']);
-            $table->date('fecha'); // si luego moverás a tour_salidas, la hacemos nullable o la quitamos allí
             $table->unsignedSmallInteger('duracion')->nullable(); // ej. 240 = 4h
             $table->decimal('precio', 10, 2);                     // precio por persona
             $table->unsignedSmallInteger('cupos')->nullable();    // default para salidas

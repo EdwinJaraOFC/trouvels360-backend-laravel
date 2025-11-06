@@ -41,13 +41,16 @@ class TourController extends Controller
             $q->whereHas('tour', fn($t)=> $t->where('categoria',$cat));
         }
 
-        // Filtro por fecha y cupos (usa salidas)
-        if ($fecha = $req->query('fecha')) {
-            $cupos = (int) $req->query('cupos', 1);
-            $q->whereHas('salidas', function($s) use ($fecha, $cupos) {
-                $s->whereDate('fecha', $fecha)
-                  ->where('estado','programada')
-                  ->whereRaw('cupo_total - cupo_reservado >= ?', [$cupos]);
+        // Filtro por rango de fechas y cupos (usa salidas)
+        if ($req->filled('checkIn')) {
+            $fechaInicio = $req->query('checkIn');
+            $fechaFin    = $req->query('checkOut', $fechaInicio);
+            $cupos       = (int) $req->query('cupos', 1);
+
+            $q->whereHas('salidas', function($s) use ($fechaInicio, $fechaFin, $cupos) {
+                $s->whereBetween('fecha', [$fechaInicio, $fechaFin])
+                ->where('estado', 'programada')
+                ->whereRaw('cupo_total - cupo_reservado >= ?', [$cupos]);
             });
         }
 
@@ -151,7 +154,6 @@ class TourController extends Controller
                 'duracion'           => $data['duracion'] ?? null,
                 'precio'             => $data['precio'],
                 'cupos'              => $data['cupos'] ?? null,
-                'fecha'              => $data['fecha'], // requerido actualmente
                 'cosas_para_llevar'  => $data['cosas_para_llevar'] ?? null,
             ]);
 
@@ -193,7 +195,7 @@ class TourController extends Controller
             // 2) Tour
             if ($serv->tour) {
                 $serv->tour->fill(array_intersect_key($data, array_flip([
-                    'categoria','duracion','precio','cupos','fecha','cosas_para_llevar'
+                    'categoria','duracion','precio','cupos','cosas_para_llevar'
                 ])))->save();
             }
 

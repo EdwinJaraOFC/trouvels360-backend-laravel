@@ -27,7 +27,6 @@ class StoreTourRequest extends FormRequest
             'duracion'            => ['nullable','integer','min:0'],
             'precio'              => ['required','numeric','min:0'],
             'cupos'               => ['nullable','integer','min:1'],
-            'fecha'               => ['required','date'], // requerido por la migración actual
             'cosas_para_llevar'   => ['nullable', 'array'],
             'cosas_para_llevar.*' => ['string'],
 

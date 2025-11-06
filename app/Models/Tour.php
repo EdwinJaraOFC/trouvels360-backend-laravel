@@ -17,7 +17,6 @@ class Tour extends Model
     protected $fillable = [
         'servicio_id',
         'categoria',
-        'fecha',
         'duracion',
         'precio',
         'cupos',
@@ -29,7 +28,6 @@ class Tour extends Model
         'precio'             => 'decimal:2',
         'cupos'              => 'integer',
         'cosas_para_llevar'  => 'array',
-        'fecha'              => 'date',
     ];
 
     // Para que {tour} en rutas use servicio_id

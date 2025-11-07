@@ -18,7 +18,6 @@ class TourFactory extends Factory
             'categoria'         => $this->faker->randomElement(['Gastronomía','Aventura','Cultura','Relajación']),
             'duracion'          => $this->faker->numberBetween(120, 480), // 2h–8h
             'precio'            => $this->faker->randomFloat(2, 20, 150),
-            'cupos'             => $this->faker->numberBetween(8, 40),
             // Importante: como array (el cast en el modelo lo convertirá a JSON)
             'cosas_para_llevar' => $this->faker->randomElements(
                 ['Cámara', 'Bloqueador solar', 'Gorra', 'Zapatillas', 'Agua', 'Gafas de sol'],

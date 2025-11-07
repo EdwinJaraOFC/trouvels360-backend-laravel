@@ -26,7 +26,6 @@ class StoreTourRequest extends FormRequest
             'categoria'           => ['nullable','in:Gastronomía,Aventura,Cultura,Relajación'],
             'duracion'            => ['nullable','integer','min:0'],
             'precio'              => ['required','numeric','min:0'],
-            'cupos'               => ['nullable','integer','min:1'],
             'cosas_para_llevar'   => ['nullable', 'array'],
             'cosas_para_llevar.*' => ['string'],
 

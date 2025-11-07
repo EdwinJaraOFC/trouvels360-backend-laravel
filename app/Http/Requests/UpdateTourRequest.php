@@ -26,7 +26,6 @@ class UpdateTourRequest extends FormRequest
             'categoria'           => ['sometimes','nullable','in:Gastronomía,Aventura,Cultura,Relajación'],
             'duracion'            => ['sometimes','nullable','integer','min:0'],
             'precio'              => ['sometimes','numeric','min:0'],
-            'cupos'               => ['sometimes','nullable','integer','min:1'],
             'cosas_para_llevar'   => ['sometimes', 'array'],
             'cosas_para_llevar.*' => ['string'],
 

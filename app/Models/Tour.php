@@ -19,14 +19,12 @@ class Tour extends Model
         'categoria',
         'duracion',
         'precio',
-        'cupos',
         'cosas_para_llevar',
     ];
 
     protected $casts = [
         'duracion'           => 'integer',
         'precio'             => 'decimal:2',
-        'cupos'              => 'integer',
         'cosas_para_llevar'  => 'array',
     ];
 

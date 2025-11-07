@@ -165,7 +165,6 @@ class TourController extends Controller
                 'categoria'          => $data['categoria'] ?? null,
                 'duracion'           => $data['duracion'] ?? null,
                 'precio'             => $data['precio'],
-                'cupos'              => $data['cupos'] ?? null,
                 'cosas_para_llevar'  => $data['cosas_para_llevar'] ?? null,
             ]);
 
@@ -203,6 +202,7 @@ class TourController extends Controller
                         'fecha'      => $item['fecha'],
                         'hora'       => $item['hora'],
                         'cupo_total' => $cupo,
+                        'cupo_reservado' => (int)($item['cupo_reservado'] ?? 0),
                         'estado'     => $item['estado'] ?? 'programada',
                     ];
                 })->values()->all();
@@ -238,7 +238,7 @@ class TourController extends Controller
             // 2) Tour
             if ($serv->tour) {
                 $serv->tour->fill(array_intersect_key($data, array_flip([
-                    'categoria','duracion','precio','cupos','cosas_para_llevar'
+                    'categoria','duracion','precio','cosas_para_llevar'
                 ])))->save();
             }
 

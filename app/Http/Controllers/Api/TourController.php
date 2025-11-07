@@ -181,7 +181,38 @@ class TourController extends Controller
                 }
             }
 
-            return $serv->load('tour');
+            // 4) Salidas (opcional)
+            if (!empty($data['salidas'])) {
+                $salidas = collect($data['salidas'])->map(function ($item){
+
+                    // Validación mínima interna
+                    if (empty($item['fecha']) || empty($item['hora'])) {
+                        throw ValidationException::withMessages([
+                            'salidas' => 'Cada salida debe incluir una fecha y hora válidas.',
+                        ]);
+                    }
+
+                    $cupo = (int)($item['cupo_total'] ?? $tour->capacidad_por_salida ?? 0);
+                    if ($cupo < 1) {
+                        throw ValidationException::withMessages([
+                            'salidas' => 'Debe especificar cupo_total o configurar capacidad_por_salida en el tour.',
+                        ]);
+                    }
+
+                    return [
+                        'fecha'      => $item['fecha'],
+                        'hora'       => $item['hora'],
+                        'cupo_total' => $cupo,
+                        'estado'     => $item['estado'] ?? 'programada',
+                    ];
+                })->values()->all();
+
+                if (!empty($salidas)) {
+                    $serv->salidas()->createMany($salidas);
+                }
+            }
+
+            return $serv->load('tour', 'imagenes','salidas');
         });
 
         return response()->json([

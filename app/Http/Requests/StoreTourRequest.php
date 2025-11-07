@@ -35,6 +35,15 @@ class StoreTourRequest extends FormRequest
             'imagenes.*'     => ['nullable'],
             'imagenes.*.url' => ['sometimes','required','url','max:500'],
             'imagenes.*.alt' => ['sometimes','nullable','string','max:150'],
+
+            // Salidas (array de salidas)
+            'salidas' => ['required', 'array', 'min:1'],
+            'salidas.*.fecha' => ['required', 'date', 'after_or_equal:today'],
+            'salidas.*.hora' => ['required', 'date_format:H:i'],
+            'salidas.*.cupo_total' => ['required', 'integer', 'min:1'],
+            'salidas.*.cupo_reservado' => ['nullable', 'integer', 'min:0'],
+            'salidas.*.estado' => ['required', 'in:programada,cerrada,cancelada'],
+
         ];
     }
 }

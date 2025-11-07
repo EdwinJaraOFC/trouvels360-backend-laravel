@@ -87,7 +87,7 @@ class ServicioController extends Controller
                 // OJO: hoteles no tiene columna 'id' → NO la pidas
                 'hotel:servicio_id,direccion,estrellas',
                 // tours también usa PK = servicio_id; su precio es 'precio'
-                'tour:servicio_id,categoria,fecha,duracion,precio',
+                'tour:servicio_id,categoria,duracion,precio',
             ])
             ->withCount([
                 'habitaciones as habitaciones_count',
@@ -137,7 +137,6 @@ class ServicioController extends Controller
             return $base + [
                 'meta_tipo' => [
                     'categoria'         => $s->tour->categoria ?? null,
-                    'fecha_base'        => $s->tour->fecha ?? null,      // si mantienes fecha en tours
                     'duracion'          => $s->tour->duracion ?? null,
                     'precio'            => isset($s->tour->precio) ? (float) $s->tour->precio : null,
                     'salidas_count'     => $s->salidas_count,

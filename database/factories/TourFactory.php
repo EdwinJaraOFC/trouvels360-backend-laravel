@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Tour;
 use App\Models\Servicio;
+use App\Models\TourItem;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class TourFactory extends Factory
@@ -18,11 +19,19 @@ class TourFactory extends Factory
             'categoria'         => $this->faker->randomElement(['Gastronomía','Aventura','Cultura','Relajación']),
             'duracion'          => $this->faker->numberBetween(120, 480), // 2h–8h
             'precio'            => $this->faker->randomFloat(2, 20, 150),
-            // Importante: como array (el cast en el modelo lo convertirá a JSON)
-            'cosas_para_llevar' => $this->faker->randomElements(
-                ['Cámara', 'Bloqueador solar', 'Gorra', 'Zapatillas', 'Agua', 'Gafas de sol'],
-                rand(2, 4)
-            ),
         ];
+    }
+    /**
+     * Hook para crear items automáticamente después de crear el tour
+     */
+    public function configure(): self
+    {
+        return $this->afterCreating(function (Tour $tour) {
+            // Creamos entre 2 y 4 items por tour
+            TourItem::factory()
+                ->count(rand(2, 4))
+                ->forServicio($tour->servicio_id)
+                ->create();
+        });
     }
 }

@@ -26,14 +26,17 @@ class StoreTourRequest extends FormRequest
             'categoria'           => ['nullable','in:Gastronomía,Aventura,Cultura,Relajación'],
             'duracion'            => ['nullable','integer','min:0'],
             'precio'              => ['required','numeric','min:0'],
-            'cosas_para_llevar'   => ['nullable', 'array'],
-            'cosas_para_llevar.*' => ['string'],
 
             // Galería (servicio_imagenes)
             'imagenes'       => ['sometimes','array','max:5'],
             'imagenes.*'     => ['nullable'],
             'imagenes.*.url' => ['sometimes','required','url','max:500'],
             'imagenes.*.alt' => ['sometimes','nullable','string','max:150'],
+
+            // Items (cosas para llevar)
+            'items' => ['sometimes','array','max:10'], // opcional y limitado a 10
+            'items.*.nombre' => ['required_with:items','string','max:100'],
+            'items.*.icono'  => ['nullable','string','max:10'], // puede ser emoji o ícono corto
 
             // Salidas (array de salidas)
             'salidas' => ['required', 'array', 'min:1'],

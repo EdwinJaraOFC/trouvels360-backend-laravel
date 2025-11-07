@@ -19,13 +19,11 @@ class Tour extends Model
         'categoria',
         'duracion',
         'precio',
-        'cosas_para_llevar',
     ];
 
     protected $casts = [
         'duracion'           => 'integer',
         'precio'             => 'decimal:2',
-        'cosas_para_llevar'  => 'array',
     ];
 
     // Para que {tour} en rutas use servicio_id
@@ -44,6 +42,12 @@ class Tour extends Model
     public function salidas()
     {
         return $this->hasMany(TourSalida::class, 'servicio_id', 'servicio_id');
+    }
+
+    /** Items del tour  **/
+    public function items()
+    {
+        return $this->hasMany(TourItem::class, 'servicio_id', 'servicio_id');
     }
 
     /** Actividades/itinerario del tour (ordenadas) */

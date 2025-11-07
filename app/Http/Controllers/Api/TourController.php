@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateTourRequest;
 use App\Models\Servicio;
 use App\Models\ServicioImagen;
 use App\Models\Tour;
+use App\Models\TourItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -88,6 +89,7 @@ class TourController extends Controller
             'tour',
             'imagenes:id,servicio_id,url,alt',  // 👈 incluir galería simple
             'actividades',
+            'tour.items:id,servicio_id,nombre,icono', // incluir items asociadas a Tour
             'salidas' => fn($q) => $q->where('estado','programada')->orderBy('fecha')->orderBy('hora'),
             'reviews' => function ($q) {
                 $q->with('usuario:id,nombre,apellido')
@@ -165,7 +167,6 @@ class TourController extends Controller
                 'categoria'          => $data['categoria'] ?? null,
                 'duracion'           => $data['duracion'] ?? null,
                 'precio'             => $data['precio'],
-                'cosas_para_llevar'  => $data['cosas_para_llevar'] ?? null,
             ]);
 
             // 3) Galería simple (opcional, máx 5)
@@ -180,7 +181,28 @@ class TourController extends Controller
                 }
             }
 
-            // 4) Salidas (opcional)
+            // 4) Items (opcional)
+            if (!empty($data['items'])) {
+                $items = collect($data['items'])->map(function ($item) use ($serv) {
+                    if (empty($item['nombre'])) {
+                        throw ValidationException::withMessages([
+                            'items' => 'Cada item debe incluir al menos un nombre.',
+                        ]);
+                    }
+
+                    return [
+                        'servicio_id' => $serv->id,
+                        'nombre' => $item['nombre'],
+                        'icono'  => $item['icono'] ?? null,
+                    ];
+                })->values()->all();
+
+                if (!empty($items)) {
+                    $serv->tour->items()->createMany($items);
+                }
+            }
+
+            // 5) Salidas (opcional)
             if (!empty($data['salidas'])) {
                 $salidas = collect($data['salidas'])->map(function ($item){
 
@@ -212,7 +234,7 @@ class TourController extends Controller
                 }
             }
 
-            return $serv->load('tour', 'imagenes','salidas');
+            return $serv->load('tour', 'tour.items', 'imagenes','salidas');
         });
 
         return response()->json([
@@ -230,19 +252,19 @@ class TourController extends Controller
         $data = $req->validated();
 
         DB::transaction(function() use ($serv, $data) {
-            // 1) Servicio
+            // 1) Actualizar servicio
             $serv->fill(array_intersect_key($data, array_flip([
                 'nombre','descripcion','ciudad','pais','imagen_url','activo'
             ])))->save();
 
-            // 2) Tour
+            // 2) Actualizar Tour
             if ($serv->tour) {
                 $serv->tour->fill(array_intersect_key($data, array_flip([
-                    'categoria','duracion','precio','cosas_para_llevar'
+                    'categoria','duracion','precio'
                 ])))->save();
             }
 
-            // 3) Si viene 'imagenes', reemplazar galería (simple)
+            // 3) Actualizar 'imagenes' si se envia
             if (array_key_exists('imagenes', $data)) {
                 $serv->imagenes()->delete();
 
@@ -255,11 +277,65 @@ class TourController extends Controller
                     $serv->imagenes()->createMany($imgs);
                 }
             }
+            // 4) Actualizar Items (si se envían)
+            if (array_key_exists('items', $data)) {
+                // Eliminar items existentes y recrear los nuevos
+                $serv->tour->items()->delete();
+
+                $items = collect($data['items'] ?? [])->map(function ($item) use ($serv) {
+                    if (empty($item['nombre'])) {
+                        throw ValidationException::withMessages([
+                            'items' => 'Cada item debe incluir al menos un nombre.',
+                        ]);
+                    }
+
+                    return [
+                        'servicio_id' => $serv->id,
+                        'nombre' => $item['nombre'],
+                        'icono'  => $item['icono'] ?? null,
+                    ];
+                })->values()->all();
+
+                if (!empty($items)) {
+                    $serv->tour->items()->createMany($items);
+                }
+            }
+            // 5) Actualizar salidas (si se envían)
+            if (array_key_exists('salidas', $data)) {
+                $serv->salidas()->delete();
+
+                $salidas = collect($data['salidas'] ?? [])->map(function ($item) use ($serv) {
+                    if (empty($item['fecha']) || empty($item['hora'])) {
+                        throw ValidationException::withMessages([
+                            'salidas' => 'Cada salida debe incluir una fecha y hora válidas.',
+                        ]);
+                    }
+
+                    $cupo = (int)($item['cupo_total'] ?? $serv->tour->capacidad_por_salida ?? 0);
+                    if ($cupo < 1) {
+                        throw ValidationException::withMessages([
+                            'salidas' => 'Debe especificar cupo_total o configurar capacidad_por_salida en el tour.',
+                        ]);
+                    }
+
+                    return [
+                        'fecha'      => $item['fecha'],
+                        'hora'       => $item['hora'],
+                        'cupo_total' => $cupo,
+                        'cupo_reservado' => (int)($item['cupo_reservado'] ?? 0),
+                        'estado'     => $item['estado'] ?? 'programada',
+                    ];
+                })->values()->all();
+
+                if (!empty($salidas)) {
+                    $serv->salidas()->createMany($salidas);
+                }
+            }
         });
 
         return response()->json([
             'message' => 'Tour actualizado correctamente',
-            'data'    => $serv->load(['tour','imagenes:id,servicio_id,url,alt']),
+            'data'    => $serv->load(['tour', 'tour.items','imagenes:id,servicio_id,url,alt','salidas']),
         ]);
     }
 

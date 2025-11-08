@@ -17,7 +17,7 @@ return new class extends Migration
                   ->constrained('servicios')
                   ->cascadeOnDelete(); // borrar servicio elimina sus items
             $table->string('nombre'); // nombre del item
-            $table->string('icono'); // emoji o icono asociado al item
+            $table->string('icono')->nullable(); // emoji o icono asociado al item
             $table->timestamps();
         });
     }

@@ -36,7 +36,7 @@ class StoreTourRequest extends FormRequest
             // Items (cosas para llevar)
             'items' => ['sometimes','array','max:10'], // opcional y limitado a 10
             'items.*.nombre' => ['required_with:items','string','max:100'],
-            'items.*.icono'  => ['nullable','string','max:10'], // puede ser emoji o ícono corto
+            'items.*.icono'  => ['nullable','string','max:50'], // puede ser emoji o ícono corto
 
             // Salidas (array de salidas)
             'salidas' => ['required', 'array', 'min:1'],

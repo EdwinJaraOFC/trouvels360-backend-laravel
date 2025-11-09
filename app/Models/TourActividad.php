@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TourActividad extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'tour_actividades';
 
@@ -20,6 +22,7 @@ class TourActividad extends Model
         'direccion',
         'imagen_url',
     ];
+    protected $dates = ['deleted_at'];
 
     protected $casts = [
         'orden'        => 'integer',

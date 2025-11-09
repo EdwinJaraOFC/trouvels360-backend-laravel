@@ -24,6 +24,10 @@ return new class extends Migration
             
             $table->text('comentario');
             $table->unsignedTinyInteger('calificacion'); // 1 a 5
+
+            // Agregar soft deletes
+            $table->softDeletes();
+            
             $table->timestamps();
         });
     }

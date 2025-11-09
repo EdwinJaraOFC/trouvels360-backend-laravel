@@ -13,7 +13,9 @@ return new class extends Migration {
             $table->enum('categoria', ['Gastronomía','Aventura','Cultura','Relajación']);
             $table->unsignedSmallInteger('duracion')->nullable(); // ej. 240 = 4h
             $table->decimal('precio', 10, 2);                     // precio por persona
-
+            
+            // Agregar soft deletes
+            $table->softDeletes();
             $table->timestamps();
 
             $table->foreign('servicio_id')

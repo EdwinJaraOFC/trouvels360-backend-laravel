@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Modelo para la tabla `hoteles`
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 class Hotel extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'hoteles';
     protected $primaryKey = 'servicio_id';
@@ -23,6 +25,7 @@ class Hotel extends Model
         'direccion',
         'estrellas',   // 1..5 (nullable)
     ];
+    protected $dates = ['deleted_at'];
 
     protected $casts = [
         'estrellas' => 'int',

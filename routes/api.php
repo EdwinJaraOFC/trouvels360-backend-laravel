@@ -66,6 +66,7 @@ Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
 
 // Público
 Route::apiResource('servicios', ServicioController::class)->only(['index','show']);
+Route::get('/eliminados', [ServicioController::class, 'eliminados']);
 
 // Protegido (mutadores → CSRF; GET no necesita CSRF)
 Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {

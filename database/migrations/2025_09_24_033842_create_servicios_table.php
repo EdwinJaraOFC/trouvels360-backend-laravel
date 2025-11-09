@@ -26,6 +26,9 @@ return new class extends Migration {
             $table->string('imagen_url', 500)->nullable();
 
             $table->boolean('activo')->default(true);
+            
+            // Agregar soft deletes
+            $table->softDeletes();
 
             $table->timestamps();
 

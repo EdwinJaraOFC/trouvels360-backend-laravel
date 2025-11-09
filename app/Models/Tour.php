@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Tour extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'tours';
     protected $primaryKey = 'servicio_id';
@@ -20,6 +22,7 @@ class Tour extends Model
         'duracion',
         'precio',
     ];
+    protected $dates = ['deleted_at'];
 
     protected $casts = [
         'duracion'           => 'integer',

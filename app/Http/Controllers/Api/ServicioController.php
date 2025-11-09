@@ -268,8 +268,54 @@ class ServicioController extends Controller
 
     // DELETE /api/servicios/{servicio}
     public function destroy(Servicio $servicio): JsonResponse
-    {
+    {   
+        // Si tiene imágenes o reviews asociadas al servicio
+        $servicio->imagenes()->delete();
+        $servicio->reviews()->delete();
+
+        // Si el servicio tiene un Tour asociado
+        if($servicio->tour) {
+            $servicio->tour->items()->delete();
+            $servicio->tour->salidas()->delete();
+            $servicio->tour->actividades()->delete();
+            $servicio->tour->delete();
+        }
+        // Si el servicio tiene un Hotel asociado
+        if($servicio->hotel) {
+            $servicio->hotel->habitaciones()->delete();
+            $servicio->hotel->delete();
+        }
+        //Soft delete del servicio
         $servicio->delete();
+
         return response()->json(null, 204);
+    }
+    public function eliminados(): JsonResponse
+    {
+        // Trae solo los servicios que tienen deleted_at != null
+        $serviciosEliminados = Servicio::onlyTrashed()
+            ->with([
+                // Relaciones directas
+                'imagenes'=>fn($q)=>$q->withTrashed(), 
+                'reviews'=>fn($q)=>$q->withTrashed(),
+
+                // Relaciones tipo Tour
+                'tour'=>fn($q)=>$q->withTrashed()->with([
+                    'items'=>fn($q2)=>$q2->withTrashed(),
+                    'salidas'=>fn($q2)=>$q2->withTrashed(),
+                    'actividades'=>fn($q2)=>$q2->withTrashed(),
+                ]),
+
+                // Relaciones tipo Hotel
+                'hotel'=>fn($q)=>$q->withTrashed()->with([
+                    'habitaciones'=>fn($q2)=>$q2->withTrashed(),
+                ]),
+            ])
+            ->get();
+
+        return response()->json([
+            'count' => $serviciosEliminados->count(),
+            'data' => $serviciosEliminados,
+        ], 200);
     }
 }

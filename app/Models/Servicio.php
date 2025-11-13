@@ -43,7 +43,7 @@ class Servicio extends Model
 
     public function habitaciones()
     {
-        return $this->hasManyThrough(Habitacion::class, Hotel::class, 'servicio_id', 'servicio_id','id','servicio_id');
+        return $this->hasMany(Habitacion::class, 'servicio_id', 'id');
     }
 
     public function reservasHabitaciones()
@@ -66,7 +66,7 @@ class Servicio extends Model
 
     public function salidas()
     {
-        return $this->hasManyThrough(TourSalida::class, Tour::class,'servicio_id', 'servicio_id','id','servicio_id');
+        return $this->hasMany(TourSalida::class, 'servicio_id','id');
     }
 
     public function actividades()

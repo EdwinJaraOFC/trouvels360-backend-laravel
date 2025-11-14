@@ -42,6 +42,16 @@ class UpdateHotelRequest extends FormRequest
             'imagenes.*'     => ['nullable'],
             'imagenes.*.url' => ['sometimes','required','url','max:500'],
             'imagenes.*.alt' => ['sometimes','nullable','string','max:150'],
+
+            // HABITACIONES
+            'habitaciones'                 => ['sometimes', 'array'],
+            'habitaciones.*.id'            => ['nullable', 'integer', 'exists:habitaciones,id'], // ID para UPDATE/DELETE
+            'habitaciones.*.nombre'        => ['sometimes', 'string', 'max:100'],
+            'habitaciones.*.capacidad_adultos' => ['sometimes', 'integer', 'min:1'],
+            'habitaciones.*.capacidad_ninos'   => ['sometimes', 'integer', 'min:0'],
+            'habitaciones.*.precio_por_noche'  => ['sometimes', 'numeric', 'min:0'],
+            'habitaciones.*.cantidad'      => ['sometimes', 'integer', 'min:1'],
+            'habitaciones.*.descripcion'   => ['nullable', 'string'],
         ];
     }
 

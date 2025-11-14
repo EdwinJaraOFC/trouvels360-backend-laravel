@@ -194,8 +194,8 @@ class HotelController extends Controller
 
         // Calcular estadísticas de reviews
         $servicio = $hotel->servicio;
-        $promedioCalificacion = $servicio->promedio_calificacion;
-        $cantidadReviews = $servicio->cantidad_reviews;
+        $promedioCalificacion = $servicio->promedio_calificacion ?? 0;
+        $cantidadReviews = $servicio->cantidad_reviews ?? 0;
 
         return response()->json([
             'hotel' => [

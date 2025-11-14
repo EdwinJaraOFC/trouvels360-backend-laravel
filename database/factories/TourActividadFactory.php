@@ -17,7 +17,7 @@ class TourActividadFactory extends Factory
     {
         return [
             // Relación con un tour (se sobreescribe en el seeder normalmente)
-            'servicio_id'  => Tour::factory()->create()->servicio_id,
+            'servicio_id'  => null, // debe recibir de create() o forServicio()
             'titulo'       => $this->faker->sentence(3),
             'descripcion'  => $this->faker->optional()->sentence(10),
             'orden'        => 1, // Default (el seeder lo sobreescribe con 1,2,3…)
@@ -31,5 +31,10 @@ class TourActividadFactory extends Factory
     public function orden(int $orden): self
     {
         return $this->state(fn () => ['orden' => $orden]);
+    }
+    /** Permite forzar el servicio asociado */
+    public function forServicio(int $servicioId): self
+    {
+        return $this->state(fn () => ['servicio_id' => $servicioId]);
     }
 }

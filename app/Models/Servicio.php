@@ -120,7 +120,7 @@ class Servicio extends Model
     public function getPromedioCalificacionAttribute(): ?float
     {
         $promedio = $this->reviews()->avg('calificacion');
-        return $promedio ? round($promedio, 1) : null;
+        return $promedio !== null ? round($promedio, 1) : 0;
     }
 
     /**
@@ -128,6 +128,6 @@ class Servicio extends Model
      */
     public function getCantidadReviewsAttribute(): int
     {
-        return $this->reviews()->count();
+        return $this->reviews()->count() ?? 0;
     }
 }

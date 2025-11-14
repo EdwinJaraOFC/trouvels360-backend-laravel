@@ -15,24 +15,21 @@ class TourItemFactory extends Factory
 
     public function definition(): array
     {
-        $tour = Tour::inRandomOrder()->first() ?? Tour::factory()->create();
-        $servicioId = $tour->servicio_id;
-
         // Posibles items y emojis
         $items = [
-            ['nombre' => 'Cámara',          'icono' => '📷'],
-            ['nombre' => 'Bloqueador solar','icono' => '🧴'],
-            ['nombre' => 'Gorra',           'icono' => '🧢'],
-            ['nombre' => 'Zapatillas',      'icono' => '👟'],
-            ['nombre' => 'Agua',            'icono' => '💧'],
-            ['nombre' => 'Gafas de sol',    'icono' => '🕶️'],
+            ['nombre' => 'Cámara',          'icono' => 'fa-solid fa-camera'],
+            ['nombre' => 'Bloqueador solar','icono' => 'fa-solid fa-sun'],
+            ['nombre' => 'Gorra',           'icono' => 'fa-solid fa-hat-cowboy'],
+            ['nombre' => 'Zapatillas',      'icono' => 'fa-solid fa-shoe-prints'],
+            ['nombre' => 'Agua',            'icono' => 'fa-solid fa-bottle-water'],
+            ['nombre' => 'Gafas de sol',    'icono' => 'fa-solid fa-glasses'],
         ];
 
         // Seleccionamos 1 item aleatorio del array
         $item = $this->faker->randomElement($items);
 
         return [
-            'servicio_id' => $servicioId,
+            //'servicio_id' debe pasarse siempre con forServicio()
             'nombre'      => $item['nombre'],
             'icono'       => $item['icono'],
         ];

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\TourSalidaController;
 use App\Http\Controllers\Api\TourActividadController;
 use App\Http\Controllers\Api\ReservaTourController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\ImageSearchController;
 
 // ---------------------------------------------------------
 // Healthcheck
@@ -182,3 +183,12 @@ Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
     Route::patch('reviews/{review}', [ReviewController::class, 'update'])->middleware('csrf.api');
     Route::delete('reviews/{review}', [ReviewController::class, 'destroy'])->middleware('csrf.api');
 });
+
+// ---------------------------------------------------------
+// IMÁGENES / UNSPLASH
+// ---------------------------------------------------------
+
+Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
+     Route::get('images/search', [ImageSearchController::class, 'search'])
+         ->name('images.search');
+ });

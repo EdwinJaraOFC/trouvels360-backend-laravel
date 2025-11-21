@@ -13,10 +13,19 @@ class HotelFactory extends Factory
     public function definition(): array
     {
         return [
-            // Cada hotel está asociado a un servicio de tipo "hotel"
-            'servicio_id' => Servicio::factory()->hotel(),
             'direccion'   => $this->faker->address(),
             'estrellas'   => $this->faker->numberBetween(1, 5),
         ];
+    }
+
+    public function configure()
+    {
+        return $this->afterMaking(function (Hotel $hotel){
+            // Crear el Servicio primero
+            $servicio = Servicio::factory()->hotel()->create();
+
+            // Reusar el mismo ID del servicio
+            $hotel->servicio_id = $servicio->id;
+        });
     }
 }

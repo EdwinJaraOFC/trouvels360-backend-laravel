@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Modelo 'usuarios' — Autenticación con JWT (sin Sanctum)
@@ -13,6 +14,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 class Usuario extends Authenticatable implements JWTSubject
 {
     use Notifiable, HasFactory; // 🔹 Eliminamos HasApiTokens (Sanctum)
+    use SoftDeletes;
 
     protected $table = 'usuarios';
 
@@ -20,6 +22,7 @@ class Usuario extends Authenticatable implements JWTSubject
         'nombre', 'apellido', 'email', 'password', 'rol',
         'empresa_nombre', 'telefono', 'ruc',
     ];
+    protected $dates = ['deleted_at'];
 
     protected $hidden = ['password', 'remember_token'];
 

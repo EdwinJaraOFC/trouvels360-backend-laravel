@@ -19,6 +19,9 @@ return new class extends Migration {
             $table->string('direccion', 255)->nullable();
             $table->string('imagen_url', 500)->nullable();
 
+            // Agregar soft deletes
+            $table->softDeletes();
+
             $table->timestamps();
 
             $table->foreign('servicio_id')

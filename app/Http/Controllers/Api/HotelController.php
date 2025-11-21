@@ -194,8 +194,8 @@ class HotelController extends Controller
 
         // Calcular estadísticas de reviews
         $servicio = $hotel->servicio;
-        $promedioCalificacion = $servicio->promedio_calificacion;
-        $cantidadReviews = $servicio->cantidad_reviews;
+        $promedioCalificacion = $servicio->promedio_calificacion ?? 0;
+        $cantidadReviews = $servicio->cantidad_reviews ?? 0;
 
         return response()->json([
             'hotel' => [
@@ -248,14 +248,14 @@ class HotelController extends Controller
     // PUT /api/hoteles/{servicio_id}
     public function update(UpdateHotelRequest $request, int $servicio_id): JsonResponse
     {
-        $hotel = Hotel::with('servicio')->find($servicio_id);
+        $hotel = Hotel::with(['servicio','habitaciones'])->find($servicio_id);
         if (!$hotel) {
             return response()->json(['message' => 'Hotel no encontrado'], 404);
         }
 
         $data = $request->validated();
 
-        DB::transaction(function () use ($hotel, $data) {
+        DB::transaction(function () use ($hotel, $data, $servicio_id) {
             // 1) Actualizar HOTEL
             $hotelData = array_intersect_key($data, array_flip(['direccion', 'estrellas']));
             if (!empty($hotelData)) {
@@ -283,19 +283,53 @@ class HotelController extends Controller
                     $hotel->servicio->imagenes()->createMany($imgs);
                 }
             }
+            if(array_key_exists('habitaciones', $data)){
+                $this->syncHabitaciones($hotel, $data['habitaciones']);
+            }
         });
 
-        $hotel->refresh()->load('servicio');
+        $hotel->refresh()->load(['servicio','habitaciones']);
 
         return response()->json([
             'message' => 'Hotel actualizado correctamente.',
             'data'    => [
                 'hotel'    => $hotel,
                 'servicio' => $hotel->servicio,
+                'habitaciones' => $hotel->habitaciones,
             ],
         ], 200);
     }
 
+    private function syncHabitaciones(Hotel $hotel, array $incomingHabitacionesData):void
+    {   
+        $incomingHabitaciones=collect($incomingHabitacionesData);
+        $existingHabitaciones = $hotel->habitaciones;
+        $servicio_id=$hotel->servicio_id;
+
+        $incomingIds=$incomingHabitaciones->pluck('id')->filter()->toArray();
+        $existingIds=$existingHabitaciones->pluck('id')->toArray();
+
+        $idsToDelete=array_diff($existingIds, $incomingIds);
+        if(!empty($idsToDelete)){
+            Habitacion::whereIn('id',$idsToDelete)
+                ->where('servicio_id', $servicio_id)
+                ->delete();
+        }
+        $incomingHabitaciones->each(function($habData) use ($servicio_id){
+            $habPayload=array_intersect_key($habData, array_flip([
+                'nombre', 'capacidad_adultos', 'capacidad_ninos', 'precio_por_noche','cantidad', 'descripcion'
+            ]));
+            if(isset($habData['id']) && $habData['id']){
+                $habitacion=Habitacion::find($habData['id']);
+                if ($habitacion && $habitacion->servicio_id===$servicio_id){
+                    $habitacion->update($habPayload);
+                }
+            }
+            else{
+                Habitacion::create(array_merge($habPayload,['servicio_id' => $servicio_id]));
+            }
+        });
+    }
 
     // DELETE /api/hoteles/{servicio_id}
     public function destroy(UpdateHotelRequest $request, int $servicio_id): JsonResponse

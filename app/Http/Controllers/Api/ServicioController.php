@@ -7,6 +7,8 @@ use App\Http\Requests\StoreServicioRequest;
 use App\Http\Requests\UpdateServicioRequest;
 use App\Models\Servicio;
 use App\Models\Habitacion;
+use App\Models\ReservaHabitacion;
+use App\Models\ReservaTour;
 use App\Models\TourSalida;
 use App\Models\ServicioImagen; // 👈 NUEVO
 use Illuminate\Http\JsonResponse;
@@ -90,8 +92,8 @@ class ServicioController extends Controller
                 'tour:servicio_id,categoria,duracion,precio',
             ])
             ->withCount([
-                'habitaciones as habitaciones_count',
-                'salidas as salidas_count',
+                'habitaciones as habitaciones_total',
+                'salidas as salidas_total',
             ])
             ->select('servicios.*')
             ->selectSub(
@@ -104,6 +106,46 @@ class ServicioController extends Controller
                     ->whereColumn('servicio_id', 'servicios.id')
                     ->where('fecha', '>=', now()->toDateString()),
                 'proximas_salidas_count'
+            )
+            ->selectSub(
+                ReservaHabitacion::selectRaw('COUNT(*)')
+                    // 2. Solo contar reservas cuyas Habitaciones servicio_id=servicios.id
+                    ->whereHas('habitacion', function ($q) {
+                        $q->whereColumn('servicio_id', 'servicios.id');
+                    })
+                    // 3. Filtrar por estado 'confirmada'
+                    ->where('estado', 'confirmada'),
+                'reservas_confirmadas_hotel' // Alias del campo
+            )
+            ->selectSub(
+                ReservaHabitacion::selectRaw('COUNT(*)')
+                    // 2. Solo contar reservas cuyas Habitaciones servicio_id=servicios.id
+                    ->whereHas('habitacion', function ($q) {
+                        $q->whereColumn('servicio_id', 'servicios.id');
+                    })
+                    // 3. Filtrar por estado 'confirmada'
+                    ->where('estado', 'cancelada'),
+                'reservas_canceladas_hotel' // Alias del campo
+            )
+            ->selectSub(
+                ReservaTour::selectRaw('COUNT(*)')
+                    // 2. Solo contar reservas cuyas Habitaciones servicio_id=servicios.id
+                    ->whereHas('salida', function ($q) {
+                        $q->whereColumn('servicio_id', 'servicios.id');
+                    })
+                    // 3. Filtrar por estado 'confirmada'
+                    ->where('estado', 'confirmada'),
+                'reservas_confirmadas_tour' // Alias del campo
+            )
+            ->selectSub(
+                ReservaTour::selectRaw('COUNT(*)')
+                    // 2. Solo contar reservas cuyas Habitaciones servicio_id=servicios.id
+                    ->whereHas('salida', function ($q) {
+                        $q->whereColumn('servicio_id', 'servicios.id');
+                    })
+                    // 3. Filtrar por estado 'confirmada'
+                    ->where('estado', 'cancelada'),
+                'reservas_canceladas_tour' // Alias del campo
             )
             ->orderBy($sortField, $dir);
 
@@ -127,8 +169,12 @@ class ServicioController extends Controller
                     'meta_tipo' => [
                         'direccion'           => $s->hotel->direccion ?? null,
                         'estrellas'           => $s->hotel->estrellas ?? null,
-                        'habitaciones_count'  => $s->habitaciones_count,
+                        'habitaciones_count'  => $s->habitaciones_total ?? 0,
                         'tarifa_min_desde'    => $s->tarifa_min_hotel !== null ? (float) $s->tarifa_min_hotel : null,
+                    ],
+                    'reservas_totales' => [
+                        'confirmadas' => (int) ($s->reservas_confirmadas_hotel ?? 0),
+                        'canceladas'  => (int) ($s->reservas_canceladas_hotel ?? 0),
                     ],
                 ];
             }
@@ -139,8 +185,12 @@ class ServicioController extends Controller
                     'categoria'         => $s->tour->categoria ?? null,
                     'duracion'          => $s->tour->duracion ?? null,
                     'precio'            => isset($s->tour->precio) ? (float) $s->tour->precio : null,
-                    'salidas_count'     => $s->salidas_count,
+                    'salidas_count'     => $s->salidas_total ?? 0,
                     'proximas_salidas'  => (int) $s->proximas_salidas_count,
+                ],
+                'reservas_totales' => [
+                    'confirmadas' => (int) ($s->reservas_confirmadas_tour ?? 0),
+                    'canceladas'  => (int) ($s->reservas_canceladas_tour ?? 0),
                 ],
             ];
         });
@@ -159,6 +209,85 @@ class ServicioController extends Controller
                 'next'  => $servicios->nextPageUrl(),
                 'last'  => $servicios->url($servicios->lastPage()),
             ],
+        ]);
+    }
+    //GET /api/proveedor/servicios/{id}/reservas
+    public function reservasPorServicio(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+
+        // 🔒 Verifica que el servicio pertenezca al proveedor autenticado
+        $servicio = Servicio::where('id', $id)
+            ->where('proveedor_id', $user->id)
+            ->firstOrFail();
+
+        // Contenedores de respuesta
+        $totales = [
+            'confirmadas' => 0,
+            'canceladas'  => 0,
+        ];
+        $detalle = [];
+
+        if ($servicio->tipo === 'hotel') {
+            // 🏨 --- HOTEL ---
+            $reservas = ReservaHabitacion::whereHas('habitacion', function ($q) use ($servicio) {
+                    $q->where('servicio_id', $servicio->id);
+                })
+                ->with(['habitacion:id,nombre,servicio_id'])
+                ->select('habitacion_id', 'estado', 'cantidad', 'total')
+                ->get();
+
+            $totales['confirmadas'] = $reservas->where('estado', 'confirmada')->count();
+            $totales['canceladas']  = $reservas->where('estado', 'cancelada')->count();
+
+            // Agrupamos por habitación
+            $detalle = $reservas->groupBy('habitacion_id')->map(function ($items, $habitacionId) {
+                $habitacion = $items->first()->habitacion;
+                return [
+                    'habitacion_id' => $habitacionId,
+                    'habitacion_nombre' => $habitacion->nombre ?? null,
+                    'reservas' => $items->count(),
+                    'total_personas' => $items->sum('cantidad'),
+                    'total_monto' => (float) $items->sum('total'),
+                ];
+            })->values()->all();
+        }
+
+        elseif ($servicio->tipo === 'tour') {
+            // 🏞 --- TOUR ---
+            $reservas = ReservaTour::whereHas('salida', function ($q) use ($servicio) {
+                    $q->where('servicio_id', $servicio->id);
+                })
+                ->with(['salida:id,servicio_id,fecha'])
+                ->select('salida_id', 'estado', 'personas', 'total')
+                ->get();
+
+            $totales['confirmadas'] = $reservas->where('estado', 'confirmada')->count();
+            $totales['canceladas']  = $reservas->where('estado', 'cancelada')->count();
+
+            // Agrupamos por salida
+            $detalle = $reservas->groupBy('salida_id')->map(function ($items, $salidaId) {
+                $salida = $items->first()->salida;
+                return [
+                    'salida_id' => $salidaId,
+                    'fecha' => $salida->fecha ?? null,
+                    'reservas' => $items->count(),
+                    'total_personas' => $items->sum('personas'),
+                    'total_monto' => (float) $items->sum('total'),
+                ];
+            })->values()->all();
+        }
+
+        else {
+            return response()->json(['error' => 'Tipo de servicio no soportado'], 400);
+        }
+
+        return response()->json([
+            'servicio_id' => $servicio->id,
+            'tipo'        => $servicio->tipo,
+            'nombre'      => $servicio->nombre,
+            'totales'     => $totales,
+            'detalle'     => $detalle,
         ]);
     }
 
@@ -268,8 +397,54 @@ class ServicioController extends Controller
 
     // DELETE /api/servicios/{servicio}
     public function destroy(Servicio $servicio): JsonResponse
-    {
+    {   
+        // Si tiene imágenes o reviews asociadas al servicio
+        $servicio->imagenes()->delete();
+        $servicio->reviews()->delete();
+
+        // Si el servicio tiene un Tour asociado
+        if($servicio->tour) {
+            $servicio->tour->items()->delete();
+            $servicio->tour->salidas()->delete();
+            $servicio->tour->actividades()->delete();
+            $servicio->tour->delete();
+        }
+        // Si el servicio tiene un Hotel asociado
+        if($servicio->hotel) {
+            $servicio->hotel->habitaciones()->delete();
+            $servicio->hotel->delete();
+        }
+        //Soft delete del servicio
         $servicio->delete();
+
         return response()->json(null, 204);
+    }
+    public function eliminados(): JsonResponse
+    {
+        // Trae solo los servicios que tienen deleted_at != null
+        $serviciosEliminados = Servicio::onlyTrashed()
+            ->with([
+                // Relaciones directas
+                'imagenes'=>fn($q)=>$q->withTrashed(), 
+                'reviews'=>fn($q)=>$q->withTrashed(),
+
+                // Relaciones tipo Tour
+                'tour'=>fn($q)=>$q->withTrashed()->with([
+                    'items'=>fn($q2)=>$q2->withTrashed(),
+                    'salidas'=>fn($q2)=>$q2->withTrashed(),
+                    'actividades'=>fn($q2)=>$q2->withTrashed(),
+                ]),
+
+                // Relaciones tipo Hotel
+                'hotel'=>fn($q)=>$q->withTrashed()->with([
+                    'habitaciones'=>fn($q2)=>$q2->withTrashed(),
+                ]),
+            ])
+            ->get();
+
+        return response()->json([
+            'count' => $serviciosEliminados->count(),
+            'data' => $serviciosEliminados,
+        ], 200);
     }
 }

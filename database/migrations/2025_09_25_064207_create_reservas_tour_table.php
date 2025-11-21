@@ -27,6 +27,9 @@ return new class extends Migration {
             $table->decimal('precio_unitario', 10, 2);
             $table->decimal('total', 10, 2);
 
+            // Agregar soft deletes
+            $table->softDeletes();
+
             $table->timestamps();
 
             $table->index(['usuario_id','estado']);

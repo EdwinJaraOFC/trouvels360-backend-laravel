@@ -23,6 +23,9 @@ return new class extends Migration {
             $table->decimal('precio_por_noche', 10, 2);    // tarifa base por noche
             $table->text('descripcion')->nullable();
 
+            // Agregar soft deletes
+            $table->softDeletes();
+
             $table->timestamps();
 
             // Evitar duplicados del mismo tipo de habitación en el mismo hotel

@@ -35,6 +35,8 @@ return new class extends Migration
 
             // Autenticación
             $table->rememberToken();
+            // Agregar soft deletes
+            $table->softDeletes();
             $table->timestamps();
         });
     }

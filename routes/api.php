@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Controllers\Api\ServicioController;
 use App\Http\Controllers\Api\AuthController; // ← ya unificado JWT
+use App\Http\Controllers\Api\ReservaController;
 use App\Http\Controllers\Api\HotelController;
 use App\Http\Controllers\Api\HabitacionController;
 use App\Http\Controllers\Api\ReservaHabitacionController;
@@ -67,6 +68,7 @@ Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
 
 // Público
 Route::apiResource('servicios', ServicioController::class)->only(['index','show']);
+Route::get('/eliminados', [ServicioController::class, 'eliminados']);
 
 // Protegido (mutadores → CSRF; GET no necesita CSRF)
 Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
@@ -74,6 +76,7 @@ Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
          ->middleware('csrf.api');
 
     Route::get('proveedor/servicios', [ServicioController::class, 'indexMine']);
+    Route::get('proveedor/servicios/{id}/reservas', [ServicioController::class, 'reservasPorServicio']);
 });
 
 // ---------------------------------------------------------

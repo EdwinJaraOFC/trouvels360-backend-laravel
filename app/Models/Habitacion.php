@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Modelo para la tabla `habitaciones`
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 class Habitacion extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'habitaciones';
 
@@ -23,6 +25,7 @@ class Habitacion extends Model
         'precio_por_noche',
         'descripcion',
     ];
+    protected $dates = ['deleted_at'];
 
     protected $casts = [
         'capacidad_adultos' => 'int',

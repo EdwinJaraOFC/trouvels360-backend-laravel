@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Servicio extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'servicios';
 
@@ -21,6 +23,7 @@ class Servicio extends Model
         'imagen_url',    // portada (principal)
         'activo',
     ];
+    protected $dates = ['deleted_at'];
 
     protected $casts = [
         'activo' => 'bool',
@@ -63,7 +66,7 @@ class Servicio extends Model
 
     public function salidas()
     {
-        return $this->hasMany(TourSalida::class, 'servicio_id', 'id');
+        return $this->hasMany(TourSalida::class, 'servicio_id','id');
     }
 
     public function actividades()
@@ -117,7 +120,7 @@ class Servicio extends Model
     public function getPromedioCalificacionAttribute(): ?float
     {
         $promedio = $this->reviews()->avg('calificacion');
-        return $promedio ? round($promedio, 1) : null;
+        return $promedio !== null ? round($promedio, 1) : 0;
     }
 
     /**
@@ -125,6 +128,6 @@ class Servicio extends Model
      */
     public function getCantidadReviewsAttribute(): int
     {
-        return $this->reviews()->count();
+        return $this->reviews()->count() ?? 0;
     }
 }

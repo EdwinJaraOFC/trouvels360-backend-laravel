@@ -21,6 +21,9 @@ return new class extends Migration {
             $table->unsignedSmallInteger('cupo_reservado')->default(0); // ocupación acumulada
             $table->enum('estado', ['programada','cerrada','cancelada'])->default('programada');
 
+            // Agregar soft deletes
+            $table->softDeletes();
+
             $table->timestamps();
 
             $table->unique(['servicio_id','fecha','hora']); // evita duplicar misma salida

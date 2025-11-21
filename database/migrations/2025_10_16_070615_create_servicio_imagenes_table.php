@@ -19,6 +19,9 @@ return new class extends Migration {
             $table->string('url', 500);
             $table->string('alt', 150)->nullable();
 
+            // Agregar soft deletes
+            $table->softDeletes();
+
             $table->timestamps();
         });
     }

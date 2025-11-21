@@ -18,6 +18,10 @@ return new class extends Migration
                   ->cascadeOnDelete(); // borrar servicio elimina sus items
             $table->string('nombre'); // nombre del item
             $table->string('icono')->nullable(); // emoji o icono asociado al item
+
+            // Agregar soft deletes
+            $table->softDeletes();
+            
             $table->timestamps();
         });
     }

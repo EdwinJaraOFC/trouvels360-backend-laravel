@@ -37,6 +37,9 @@ return new class extends Migration {
             $table->decimal('precio_por_noche', 10, 2);
             $table->decimal('total', 12, 2);
 
+            // Agregar soft deletes
+            $table->softDeletes();
+
             $table->timestamps();
 
             // Índices

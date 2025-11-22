@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log; // <--- ¡AGREGA ESTO AQUÍ!
 
 class AttachJwtFromCookie
 {
@@ -14,6 +15,15 @@ class AttachJwtFromCookie
      */
     public function handle(Request $request, Closure $next)
     {
+        // --- DEBUG LOG ---
+        $cookieToken = $request->cookie('access_token');
+        Log::info('🕵️ Middleware Debug:', [
+            'tiene_header_bearer' => $request->bearerToken() ? 'SI' : 'NO',
+            'tiene_cookie' => $cookieToken ? 'SI (Longitud: ' . strlen($cookieToken) . ')' : 'NO',
+            'ip_origen' => $request->ip()
+        ]);
+        // -----------------
+
         // Si la petición NO tiene un header Authorization válido...
         if (!$request->bearerToken()) {
             // ...buscamos la cookie 'access_token'

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Illuminate\Support\Facades\Log; // <--- AGREGA ESTA LÍNEA
 
 class AuthController extends Controller
 {
@@ -256,6 +257,8 @@ class AuthController extends Controller
             ]);
     
         } catch (\Throwable $e) {
+            Log::error("Error generando token para microservicio: " . $e->getMessage());
+
             return response()->json([
                 'message' => 'Token inválido'
             ], 401);

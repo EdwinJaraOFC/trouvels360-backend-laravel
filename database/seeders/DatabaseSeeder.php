@@ -51,7 +51,7 @@ class DatabaseSeeder extends Seeder
         Usuario::factory()->proveedor()->count(5)->create();
 
         // ---------------------------------------------------------
-        // HOTELS PACK: 5 hoteles con varios tipos de habitaciones
+        // HOTELS PACK: 5 hoteles con coordenadas REALES
         // ---------------------------------------------------------
         $hotelesConfig = [
             [
@@ -61,6 +61,9 @@ class DatabaseSeeder extends Seeder
                     'pais'        => 'Perú',
                     'descripcion' => 'Un hotel de prueba para el seeder en Lima.',
                     'imagen_url'  => 'https://image-tc.galaxy.tf/wijpeg-3ccyhqat2arc8mjzjlbe07ac7/miraflores.jpg?rotate=0&crop=0%2C148%2C632%2C606&width=1920',
+                    // 👇 Coordenadas de Miraflores, Lima
+                    'latitud'     => -12.1211,
+                    'longitud'    => -77.0293,
                 ],
                 'hotel' => ['estrellas' => 4],
                 'habitaciones' => [
@@ -77,6 +80,9 @@ class DatabaseSeeder extends Seeder
                     'pais'        => 'Perú',
                     'descripcion' => 'Boutique acogedor cerca del centro histórico.',
                     'imagen_url'  => 'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/06/a1/51/71/best-western-los-andes.jpg?w=900&h=500&s=1',
+                    // 👇 Coordenadas de Plaza de Armas, Cusco
+                    'latitud'     => -13.5167,
+                    'longitud'    => -71.9781,
                 ],
                 'hotel' => ['estrellas' => 3],
                 'habitaciones' => [
@@ -92,6 +98,9 @@ class DatabaseSeeder extends Seeder
                     'pais'        => 'Perú',
                     'descripcion' => 'Hotel con piscina y vista al Misti.',
                     'imagen_url'  => 'https://www.cataloniahotels.com/es/blog/wp-content/uploads/2016/11/catalonia-riviera-maya.jpg',
+                    // 👇 Coordenadas de Arequipa
+                    'latitud'     => -16.3988,
+                    'longitud'    => -71.5350,
                 ],
                 'hotel' => ['estrellas' => 5],
                 'habitaciones' => [
@@ -100,7 +109,6 @@ class DatabaseSeeder extends Seeder
                     ['nombre' => 'Family',  'cap_adultos' => 3, 'cap_ninos' => 2, 'cantidad' => 5,  'precio' => 420.00, 'desc' => '2 ambientes conectados.'],
                 ],
             ],
-            // NUEVO 4: Trujillo
             [
                 'servicio' => [
                     'nombre'      => 'Costa Verde Trujillo',
@@ -108,6 +116,9 @@ class DatabaseSeeder extends Seeder
                     'pais'        => 'Perú',
                     'descripcion' => 'Cerca a la playa de Huanchaco y al centro histórico.',
                     'imagen_url'  => 'https://www.turiweb.pe/wp-content/uploads/2021/10/hoteles-071021.jpg',
+                    // 👇 Coordenadas de Huanchaco, Trujillo
+                    'latitud'     => -8.1116,
+                    'longitud'    => -79.0286,
                 ],
                 'hotel' => ['estrellas' => 4],
                 'habitaciones' => [
@@ -116,7 +127,6 @@ class DatabaseSeeder extends Seeder
                     ['nombre' => 'Suite',    'cap_adultos' => 3, 'cap_ninos' => 1, 'cantidad' => 6,  'precio' => 360.00, 'desc' => 'Suite con sala y balcón.'],
                 ],
             ],
-            // NUEVO 5: Piura
             [
                 'servicio' => [
                     'nombre'      => 'Piura Sun Resort',
@@ -124,6 +134,9 @@ class DatabaseSeeder extends Seeder
                     'pais'        => 'Perú',
                     'descripcion' => 'Resort con clima cálido todo el año y piscina.',
                     'imagen_url'  => 'https://www.viajes.cl/hubfs/Vista%20a%C3%A9rea%20del%20hotel%20Belmond%20Miraflores%20Park%20en%20Lima.jpg',
+                    // 👇 Coordenadas de Piura
+                    'latitud'     => -5.1945,
+                    'longitud'    => -80.6328,
                 ],
                 'hotel' => ['estrellas' => 4],
                 'habitaciones' => [
@@ -148,6 +161,8 @@ class DatabaseSeeder extends Seeder
                 'pais'         => $cfg['servicio']['pais'],
                 'descripcion'  => $cfg['servicio']['descripcion'],
                 'imagen_url'   => $cfg['servicio']['imagen_url'],
+                'latitud'      => $cfg['servicio']['latitud'] ?? null,
+                'longitud'     => $cfg['servicio']['longitud'] ?? null,
                 'activo'       => true
             ]);
 

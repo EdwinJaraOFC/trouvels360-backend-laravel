@@ -44,7 +44,13 @@ class ServicioFactory extends Factory
             'tipo'         => $tipo,
             'descripcion'  => $this->faker->sentence(10),
             'ciudad'       => $this->faker->city,
-            'pais'         => $this->faker->country,
+            'pais'         => 'Perú', // Mejor forzar Perú si usas coordenadas de Perú
+            
+            // 📍 NUEVOS CAMPOS DE GEOLOCALIZACIÓN
+            // Coordenadas aproximadas de Perú (para que no salgan en África o el mar)
+            'latitud'      => $this->faker->latitude(-18, -0.3),  // Entre Tacna y Putumayo
+            'longitud'     => $this->faker->longitude(-81, -68), // Entre Talara y Puerto Maldonado
+            
             // Portada según tipo
             'imagen_url'   => $this->faker->randomElement($imagenes),
             'activo'       => true,

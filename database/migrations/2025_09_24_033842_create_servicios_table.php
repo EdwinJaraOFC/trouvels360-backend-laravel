@@ -22,6 +22,10 @@ return new class extends Migration {
             $table->string('ciudad', 100);
             $table->string('pais', 100);
 
+            // Coordenadas
+            $table->decimal('latitud', 10, 6)->nullable();
+            $table->decimal('longitud', 10, 6)->nullable();
+
             // Imagen principal opcional (portada/fallback)
             $table->string('imagen_url', 500)->nullable();
 

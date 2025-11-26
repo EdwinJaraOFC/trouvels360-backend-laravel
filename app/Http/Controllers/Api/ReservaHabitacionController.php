@@ -55,7 +55,7 @@ class ReservaHabitacionController extends Controller
             'fecha_inicio'     => $in,
             'fecha_fin'        => $out,
             'cantidad'         => $qty,
-            'estado'           => 'pendiente',
+            'estado'           => 'confirmada',
             'precio_por_noche' => $precio,
             'total'            => $total,
         ]);

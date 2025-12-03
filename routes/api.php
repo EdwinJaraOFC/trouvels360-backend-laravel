@@ -22,6 +22,23 @@ use App\Http\Controllers\Api\ImageSearchController;
 // ---------------------------------------------------------
 Route::get('ping', fn () => response()->json(['pong' => true]));
 
+Route::get('/sanctum/csrf-cookie', function () {
+    return response()
+        ->json(['status' => 'ok'])
+        ->withCookie(
+            cookie(
+                name: 'XSRF-TOKEN',
+                value: csrf_token(),
+                minutes: 120,
+                path: '/',
+                domain: null,     // Importante → Laravel detecta dominio automáticamente
+                secure: true,     // Obligatorio para Vercel/Render (HTTPS)
+                httpOnly: false,  // Angular debe poder leerla
+                sameSite: 'none'  // Obligatorio para cross-site
+            )
+        );
+});
+
 // ---------------------------------------------------------
 // AUTH (JWT con cookies HttpOnly + CSRF)  => /api/auth/*
 // ---------------------------------------------------------

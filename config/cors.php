@@ -19,11 +19,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [],
-
-    'allowed_origins_patterns' => [
+    'allowed_origins' => [
         'https://trouvels360.vercel.app',
-        'https://trouvels360-.*\.vercel\.app',
+    ],
+    'allowed_origins_patterns' => [
+        '#^https://.*\.vercel\.app$#',
     ],
 
     'allowed_headers' => ['*'],

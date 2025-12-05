@@ -22,22 +22,9 @@ use App\Http\Controllers\Api\ImageSearchController;
 // ---------------------------------------------------------
 Route::get('ping', fn () => response()->json(['pong' => true]));
 
-Route::get('/sanctum/csrf-cookie', function () {
-    return response()
-        ->json(['status' => 'ok'])
-        ->withCookie(
-            cookie(
-                name: 'XSRF-TOKEN',
-                value: csrf_token(),
-                minutes: 120,
-                path: '/',
-                domain: null,     // Importante → Laravel detecta dominio automáticamente
-                secure: true,     // Obligatorio para Vercel/Render (HTTPS)
-                httpOnly: false,  // Angular debe poder leerla
-                sameSite: 'none'  // Obligatorio para cross-site
-            )
-        );
-});
+//Route::get('/sanctum/csrf-cookie', function () {
+//    return response()->json(['status' => 'ok']);
+//});
 
 // ---------------------------------------------------------
 // AUTH (JWT con cookies HttpOnly + CSRF)  => /api/auth/*
@@ -52,7 +39,7 @@ Route::prefix('auth')->group(function () {
 
     // 3) Login: setea cookie HttpOnly 'access_token' — requiere CSRF
     Route::post('/login', [AuthController::class, 'login'])
-        ->middleware(['csrf.api', 'throttle:6,1']);
+        ->middleware(['throttle:6,1']);
 
     // 3.5) 🔐 NUEVO: Obtener el JWT leyendo la cookie HttpOnly actual
     Route::get('/token', [AuthController::class, 'tokenFromCookie'])

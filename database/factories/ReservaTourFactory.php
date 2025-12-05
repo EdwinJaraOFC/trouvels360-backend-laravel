@@ -43,6 +43,15 @@ class ReservaTourFactory extends Factory
         return $this->state(fn () => ['estado' => 'cancelada']);
     }
 
+    public function pasado(): self
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'salida_id' => TourSalida::factory()->pasado(),
+            ];
+        });
+    }
+
     public function configure(): self
     {
         return $this->afterCreating(function (ReservaTour $reserva) {

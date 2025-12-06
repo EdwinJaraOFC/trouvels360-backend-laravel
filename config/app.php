@@ -52,7 +52,7 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'http://localhost'),
+    'url' => env('APP_URL', 'https://trouvels360-services-itenerary-production.up.railway.app'),
 
     /*
     |--------------------------------------------------------------------------

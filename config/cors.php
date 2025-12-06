@@ -21,6 +21,7 @@ return [
 
     'allowed_origins' => [
         'https://trouvels360.vercel.app',
+        'https://trouvels360-services-itenerary-production.up.railway.app',
     ],
     'allowed_origins_patterns' => [
         '#^https://.*\.vercel\.app$#',

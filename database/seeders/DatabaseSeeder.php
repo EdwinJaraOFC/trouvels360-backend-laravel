@@ -451,7 +451,7 @@ class DatabaseSeeder extends Seeder
                 'longitud'    => -70.020071,
                 ],
             'tour' => [
-                'categoria' => 'Naturaleza',
+                'categoria' => 'Aventura',
                 'duracion'  => 150,
                 'precio'    => 210.00,
                 ],
@@ -472,7 +472,7 @@ class DatabaseSeeder extends Seeder
                 'longitud'    => -81.043330,
                 ],
             'tour' => [
-                'categoria' => 'Naturaleza',
+                'categoria' => 'Aventura',
                 'duracion'  => 100,
                 'precio'    => 85.60,
                 ],

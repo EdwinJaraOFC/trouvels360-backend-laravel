@@ -35,7 +35,7 @@ Route::prefix('auth')->group(function () {
 
     // 2) Registro (opcional). Requiere CSRF.
     Route::post('/register', [AuthController::class, 'register'])
-        ->middleware(['csrf.api','throttle:10,1']);
+        ->middleware(['throttle:10,1']);
 
     // 3) Login: setea cookie HttpOnly 'access_token' — requiere CSRF
     Route::post('/login', [AuthController::class, 'login'])
@@ -47,12 +47,12 @@ Route::prefix('auth')->group(function () {
 
     // 4) Refresh: fuera de jwt.auth (acepta token expirado dentro de refresh_ttl)
     Route::post('/refresh', [AuthController::class, 'refresh'])
-        ->middleware(['jwt.cookie', 'csrf.api']);
+        ->middleware(['jwt.cookie']);
 
     // 5) Rutas protegidas por JWT vigente
     Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
-        Route::post('/logout', [AuthController::class, 'logout'])->middleware('csrf.api');
+        Route::post('/logout', [AuthController::class, 'logout']);
     });
 });
 
@@ -65,9 +65,9 @@ Route::apiResource('usuarios', UsuarioController::class)->only(['index','show'])
 
 // Protegido: actualizar/eliminar la propia cuenta (mutadores → CSRF)
 Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
-    Route::patch('usuarios/me', [UsuarioController::class, 'updateMe'])->middleware('csrf.api');
-    Route::put('usuarios/me',   [UsuarioController::class, 'updateMe'])->middleware('csrf.api');
-    Route::delete('usuarios/me',[UsuarioController::class, 'destroyMe'])->middleware('csrf.api');
+    Route::patch('usuarios/me', [UsuarioController::class, 'updateMe']);
+    Route::put('usuarios/me',   [UsuarioController::class, 'updateMe']);
+    Route::delete('usuarios/me',[UsuarioController::class, 'destroyMe']);
 });
 
 // ---------------------------------------------------------
@@ -80,8 +80,7 @@ Route::get('/eliminados', [ServicioController::class, 'eliminados']);
 
 // Protegido (mutadores → CSRF; GET no necesita CSRF)
 Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
-    Route::apiResource('servicios', ServicioController::class)->only(['store','update','destroy'])
-         ->middleware('csrf.api');
+    Route::apiResource('servicios', ServicioController::class)->only(['store','update','destroy']);
 
     Route::get('proveedor/servicios', [ServicioController::class, 'indexMine']);
     Route::get('proveedor/servicios/{id}/reservas', [ServicioController::class, 'reservasPorServicio']);
@@ -98,27 +97,27 @@ Route::get('hoteles/{servicio_id}/disponibilidad', [HotelController::class, 'dis
 
 // Protegido (mutadores → CSRF)
 Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
-    Route::post('hoteles', [HotelController::class, 'store'])->middleware('csrf.api');
+    Route::post('hoteles', [HotelController::class, 'store']);
 
     Route::put('hoteles/{servicio_id}', [HotelController::class, 'update'])
-         ->whereNumber('servicio_id')->middleware('csrf.api');
+         ->whereNumber('servicio_id');
 
     Route::delete('hoteles/{servicio_id}', [HotelController::class, 'destroy'])
-         ->whereNumber('servicio_id')->middleware('csrf.api');
+         ->whereNumber('servicio_id');
 
     Route::post('hoteles/{servicio_id}/habitaciones', [HabitacionController::class, 'store'])
-         ->whereNumber('servicio_id')->middleware('csrf.api');
+         ->whereNumber('servicio_id');
 
     Route::put('habitaciones/{habitacion}', [HabitacionController::class, 'update'])
-         ->whereNumber('habitacion')->middleware('csrf.api');
+         ->whereNumber('habitacion');
 
     Route::delete('habitaciones/{habitacion}', [HabitacionController::class, 'destroy'])
-         ->whereNumber('habitacion')->middleware('csrf.api');
+         ->whereNumber('habitacion');
 
     // Reservas de habitaciones (viajero)
-    Route::post('reservas-habitaciones', [ReservaHabitacionController::class, 'store'])->middleware('csrf.api');
+    Route::post('reservas-habitaciones', [ReservaHabitacionController::class, 'store']);
     Route::post('reservas-habitaciones/{reserva}/cancelar', [ReservaHabitacionController::class, 'cancelar'])
-         ->whereNumber('reserva')->middleware('csrf.api');
+         ->whereNumber('reserva');
 
     // GET protegido (no requiere CSRF)
     Route::get('mis-reservas', [ReservaHabitacionController::class, 'misReservas']);
@@ -136,45 +135,45 @@ Route::get('tours/{tour}/actividades', [TourActividadController::class, 'index']
 
 // Protegido (mutadores → CSRF)
 Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
-    Route::post('tours', [TourController::class, 'store'])->middleware('csrf.api');
+    Route::post('tours', [TourController::class, 'store']);
 
     Route::put('tours/{tour}', [TourController::class, 'update'])
-         ->whereNumber('tour')->middleware('csrf.api');
+         ->whereNumber('tour');
     Route::patch('tours/{tour}', [TourController::class, 'update'])
-         ->whereNumber('tour')->middleware('csrf.api');
+         ->whereNumber('tour');
 
     Route::delete('tours/{tour}', [TourController::class, 'destroy'])
-         ->whereNumber('tour')->middleware('csrf.api');
+         ->whereNumber('tour');
 
     Route::post('tours/{tour}/salidas', [TourSalidaController::class, 'store'])
-         ->whereNumber('tour')->middleware('csrf.api');
+         ->whereNumber('tour');
 
     Route::put('tours/{tour}/salidas/{salida}', [TourSalidaController::class, 'update'])
-         ->whereNumber('tour')->whereNumber('salida')->middleware('csrf.api');
+         ->whereNumber('tour')->whereNumber('salida');
 
     Route::patch('tours/{tour}/salidas/{salida}', [TourSalidaController::class, 'update'])
-         ->whereNumber('tour')->whereNumber('salida')->middleware('csrf.api');
+         ->whereNumber('tour')->whereNumber('salida');
 
     Route::delete('tours/{tour}/salidas/{salida}', [TourSalidaController::class, 'destroy']
-         )->whereNumber('tour')->whereNumber('salida')->middleware('csrf.api');
+         )->whereNumber('tour')->whereNumber('salida');
 
     Route::post('tours/{tour}/actividades', [TourActividadController::class, 'store'])
-         ->whereNumber('tour')->middleware('csrf.api');
+         ->whereNumber('tour');
 
     Route::put('tours/{tour}/actividades/{actividad}', [TourActividadController::class, 'update'])
-         ->whereNumber('tour')->whereNumber('actividad')->middleware('csrf.api');
+         ->whereNumber('tour')->whereNumber('actividad');
 
     Route::patch('tours/{tour}/actividades/{actividad}', [TourActividadController::class, 'update'])
-         ->whereNumber('tour')->whereNumber('actividad')->middleware('csrf.api');
+         ->whereNumber('tour')->whereNumber('actividad');
 
     Route::delete('tours/{tour}/actividades/{actividad}', [TourActividadController::class, 'destroy'])
-         ->whereNumber('tour')->whereNumber('actividad')->middleware('csrf.api');
+         ->whereNumber('tour')->whereNumber('actividad');
 
     Route::post('tours/salidas/{salida}/reservas', [ReservaTourController::class, 'store'])
-         ->whereNumber('salida')->middleware('csrf.api');
+         ->whereNumber('salida');
 
     Route::post('tours/reservas/{reserva}/cancelar', [ReservaTourController::class, 'cancelar'])
-         ->whereNumber('reserva')->middleware('csrf.api');
+         ->whereNumber('reserva');
 
     // GET protegido
     Route::get('tours/mis-reservas', [ReservaTourController::class, 'misReservas']);
@@ -189,10 +188,10 @@ Route::get('reviews', [ReviewController::class, 'index']);
 
 // Protegido (mutadores → CSRF)
 Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
-    Route::post('reviews', [ReviewController::class, 'store'])->middleware('csrf.api');
-    Route::put('reviews/{review}', [ReviewController::class, 'update'])->middleware('csrf.api');
-    Route::patch('reviews/{review}', [ReviewController::class, 'update'])->middleware('csrf.api');
-    Route::delete('reviews/{review}', [ReviewController::class, 'destroy'])->middleware('csrf.api');
+    Route::post('reviews', [ReviewController::class, 'store']);
+    Route::put('reviews/{review}', [ReviewController::class, 'update']);
+    Route::patch('reviews/{review}', [ReviewController::class, 'update']);
+    Route::delete('reviews/{review}', [ReviewController::class, 'destroy']);
 });
 
 // ---------------------------------------------------------

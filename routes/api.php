@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\TourActividadController;
 use App\Http\Controllers\Api\ReservaTourController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\ImageSearchController;
+use App\Http\Controllers\Api\ItineraryController;
 
 // ---------------------------------------------------------
 // Healthcheck
@@ -36,10 +37,6 @@ Route::prefix('auth')->group(function () {
     // 3) Login: setea cookie HttpOnly 'access_token' — requiere CSRF
     Route::post('/login', [AuthController::class, 'login'])
         ->middleware(['csrf.api', 'throttle:6,1']);
-
-    // 3.5) 🔐 NUEVO: Obtener el JWT leyendo la cookie HttpOnly actual
-    Route::get('/token', [AuthController::class, 'tokenFromCookie'])
-        ->middleware(['jwt.cookie','jwt.auth']);
 
     // 4) Refresh: fuera de jwt.auth (acepta token expirado dentro de refresh_ttl)
     Route::post('/refresh', [AuthController::class, 'refresh'])
@@ -199,3 +196,14 @@ Route::middleware(['jwt.cookie','jwt.auth'])->group(function () {
      Route::get('images/search', [ImageSearchController::class, 'search'])
          ->name('images.search');
 });
+
+// ---------------------------------------------------------
+// ITINERARIOS (Microservicio Python)
+// ---------------------------------------------------------
+
+Route::middleware(['jwt.cookie', 'jwt.auth'])->group(function () {
+     // Endpoint para generar itinerario
+     // POST /api/itineraries
+     Route::post('itineraries', [ItineraryController::class, 'store'])
+         ->middleware('csrf.api'); // Protegemos contra CSRF igual que las otras rutas POST
+ });

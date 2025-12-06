@@ -35,4 +35,18 @@ class ReservaHabitacionFactory extends Factory
             'total'            => round($precio * $cantidad * $noches, 2), // noches reales
         ];
     }
+
+    public function pasado(): self
+    {
+        return $this->state(function (array $attributes) {
+            $fechaInicio = Carbon::instance($this->faker->dateTimeBetween('-1 month', '-1 day'));
+            $noches = $this->faker->numberBetween(1, 7);
+            $fechaFin = (clone $fechaInicio)->copy()->addDays($noches);
+
+            return [
+                'fecha_inicio' => $fechaInicio->toDateString(),
+                'fecha_fin' => $fechaFin->toDateString(),
+            ];
+        });
+    }
 }

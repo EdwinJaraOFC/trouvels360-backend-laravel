@@ -53,4 +53,13 @@ class TourSalidaFactory extends Factory
     {
         return $this->state(fn () => ['servicio_id' => $servicioId]);
     }
+
+    public function pasado(): self
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'fecha' => $this->faker->dateTimeBetween('-2 months', '-1 day')->format('Y-m-d'),
+            ];
+        });
+    }
 }

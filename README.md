@@ -1,61 +1,222 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+🌍 Trouvels360 – Backend PHP
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Backend principal de Trouvels360, una plataforma integral de planificación de viajes que permite a los viajeros descubrir, reservar y calificar servicios turísticos (hoteles y tours), y a los proveedores gestionar sus publicaciones y visualizar reportes básicos.
 
-## About Laravel
+Este backend constituye el núcleo transaccional del sistema y expone una API REST consumida por el frontend desarrollado en Angular y por el microservicio de optimización de itinerarios desarrollado en Python.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+📌 Visión del Producto
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Trouvels360 busca convertirse en una ventanilla única para el viajero moderno, combinando en una sola plataforma:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Un marketplace de servicios turísticos
 
-## Learning Laravel
+Un sistema de reservas (simuladas en el MVP)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Un sistema de calificaciones y reseñas
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+Un motor de recomendación de itinerarios mediante microservicios
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+La plataforma conecta a viajeros con proveedores locales, fomentando un ecosistema turístico dinámico e interactivo.
 
-## Laravel Sponsors
+🏗️ Arquitectura General
+[ Angular Frontend ]
+        |
+        v
+[ Trouvels360 - Backend PHP (API REST) ]
+        |
+        +--> Base de Datos
+        |     - Usuarios
+        |     - Servicios (Hoteles / Tours)
+        |     - Reservas
+        |     - Reseñas
+        |
+        +--> [ Microservicio Python ]
+                /api/itinerary/optimize
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+👥 Roles del Sistema
 
-### Premium Partners
+El backend de Trouvels360 gestiona autenticación, autorización y control de acceso basado en roles:
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+✈️ Viajero
 
-## Contributing
+Buscar hoteles y tours
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Ver detalles y reseñas
 
-## Code of Conduct
+Simular reservas
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Solicitar sugerencias de itinerario
 
-## Security Vulnerabilities
+Calificar y dejar reseñas
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+🏨 Proveedor
 
-## License
+Registrar y administrar su perfil
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Publicar y gestionar servicios turísticos
+
+Visualizar reportes básicos de rendimiento
+
+🚀 Funcionalidades del MVP
+🔐 Autenticación y Gestión de Usuarios
+
+Registro e inicio de sesión
+
+Gestión de perfil
+
+Asignación de roles (viajero, proveedor)
+
+Protección de endpoints según rol
+
+🏨 Gestión de Servicios Turísticos
+
+Los proveedores pueden crear, editar y eliminar:
+
+Hoteles
+
+Tours
+
+Información gestionada:
+
+Nombre
+
+Descripción
+
+Ciudad y dirección
+
+Categoría (para tours)
+
+Precio base
+
+Imágenes (1 a 5, clickeables desde el frontend)
+
+🔍 Búsqueda y Descubrimiento
+
+Búsqueda de servicios por ciudad
+
+Filtros por tipo (hotel / tour) y categoría
+
+Visualización de:
+
+Precio
+
+Estrellas promedio
+
+Información principal del servicio
+
+📄 Página de Detalle del Servicio
+
+Información completa del servicio
+
+Galería de imágenes
+
+Listado de reseñas
+
+Calificación promedio (1 a 5 estrellas)
+
+📝 Reservas Simuladas (MVP)
+
+Registro de reservas sin pasarela de pago
+
+Generación de código de reserva
+
+Visualización de reservas por proveedor
+
+⭐ Sistema de Calificaciones y Reseñas
+
+Los viajeros pueden:
+
+Asignar una calificación en estrellas
+
+Escribir una reseña
+
+El sistema:
+
+Recalcula automáticamente la calificación promedio
+
+Muestra el resultado en búsquedas y detalles
+
+📊 Reportes Básicos para Proveedores
+
+Número de reservas simuladas por servicio
+
+Calificación promedio
+
+Métricas simples de rendimiento
+
+🔗 Integración con el Microservicio de Itinerarios
+
+Trouvels360 utiliza un microservicio en Python para la planificación de viajes.
+
+Endpoint consumido
+POST /api/itinerary/optimize
+
+Ejemplo de Request
+{
+  "destination": "Cusco",
+  "days": 2
+}
+
+Ejemplo de Response (MVP)
+{
+  "itinerary": [
+    "Día 1: Plaza de Armas, Catedral",
+    "Día 2: Valle Sagrado"
+  ]
+}
+
+
+En el MVP, el itinerario es predefinido o fijo, validando la correcta comunicación entre servicios.
+
+📦 Endpoints Principales (Referencia)
+Método	Endpoint	Descripción
+POST	/api/auth/register	Registro de usuario
+POST	/api/auth/login	Inicio de sesión
+GET	/api/services	Listado de hoteles y tours
+GET	/api/services/{id}	Detalle de servicio
+POST	/api/services	Crear servicio (Proveedor)
+PUT	/api/services/{id}	Editar servicio
+DELETE	/api/services/{id}	Eliminar servicio
+POST	/api/reservations	Crear reserva simulada
+POST	/api/reviews	Crear reseña
+GET	/api/provider/reports	Reportes del proveedor
+🛠️ Tecnologías Utilizadas
+
+PHP – Backend principal
+
+API REST
+
+Base de Datos Relacional (MySQL / PostgreSQL)
+
+JWT o Sesiones para autenticación
+
+Arquitectura MVC o similar
+
+ℹ️ El frontend en Angular y el microservicio en Python se mantienen en repositorios independientes.
+
+📈 Roadmap (Post-MVP)
+
+Gestión real de disponibilidad
+
+Algoritmo de optimización de itinerarios basado en coordenadas
+
+Integración con API de mapas (Google Maps / Mapbox)
+
+Visualización de reservas por viajero
+
+Reportes avanzados para proveedores
+
+✅ Criterios de Éxito
+
+Un viajero puede registrarse, reservar y dejar reseñas
+
+Un proveedor puede publicar servicios y visualizar métricas
+
+La API es clara, segura y desacoplada
+
+Integración funcional con el microservicio de itinerarios
+
+👨‍💻 Proyecto
+
+Trouvels360
+Plataforma de planificación de viajes basada en una arquitectura moderna, orientada a microservicios y enfocada en la experiencia del usuario.
